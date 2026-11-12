@@ -18,12 +18,14 @@ void Pad(int port, input::Pad& pad) {
     input::SeenPad(pad);
     if (port == 0) {
         pad.connected = true;
-        // Minus + R3 opens and closes the panel
-        constexpr uint16_t kCombo = 1u << 5 | 1u << 7;  // back, right thumb
+#ifndef __SWITCH__
+        // L3 + R3 opens and closes the panel (on the Switch host-switch/ui.cpp already does it)
+        constexpr uint16_t kCombo = 1u << 6 | 1u << 7;  // left thumb, right thumb
         static bool held = false;
         bool down = (pad.buttons & kCombo) == kCombo;
         if (down && !held) app::ToggleMenu();
         held = down;
+#endif
     }
     if (app::MenuOpen()) pad = input::Pad{.connected = pad.connected};
     else if (port == 0) input::Keyboard(pad);

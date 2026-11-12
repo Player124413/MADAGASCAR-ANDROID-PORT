@@ -6,7 +6,7 @@
 
 A static recompilation port of the original Xbox Madagascar, running natively on the Switch.
 
-![version](https://img.shields.io/badge/version-0.1.7-blue) ![platform](https://img.shields.io/badge/platform-Nintendo%20Switch-E60012?logo=nintendoswitch&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green) [![Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/gerissoncassiano)
+![version](https://img.shields.io/badge/version-0.1.8-blue) ![platform](https://img.shields.io/badge/platform-Nintendo%20Switch-E60012?logo=nintendoswitch&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green) [![Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/gerissoncassiano)
 
 [Português (BR)](README.md) · **English** · [Español](README.es.md)
 
@@ -32,21 +32,21 @@ Donations are optional: nobody has to donate to play, and the project neither in
 
 Playable from the menu to gameplay, with audio, videos and the game's image effects (glow and depth of field).
 
-What 0.1.7 has:
+What 0.1.8 has:
 
 - Direct3D 8 rewritten in Vulkan (NVK), without emulating the NV2A GPU.
 - Audio: sound effects, voices and streamed music.
 - Bink videos.
 - Depth of field as on the original: sharp gameplay, blurred background behind the menus and the demo.
 - Threads spread across the Switch's three cores.
-- **Port menu:** press **−** (Minus) and **R3** together. Render resolution, screen filter, brightness, V-Sync, FPS limit, FPS counter, anisotropic filtering, audio output and OLED SCREEN BOOST.
+- **Port menu:** press **L3** and **R3** together (both sticks). Render resolution, screen filter, brightness, V-Sync, FPS limit, FPS counter, anisotropic filtering, audio output and OLED SCREEN BOOST.
 - Black side bars as on the original (the game is 4:3).
 - No overclock needed.
 
 Known issues:
 
 - At stock clocks the frame rate still drops below 30 in parts of gameplay; with the GPU at 614 MHz it holds. Lowering the render resolution in the port menu (for example to 75%) helps.
-- 0.1.7 is still being tested on real hardware.
+- 0.1.8 is still being tested on real hardware.
 
 ## Screenshots
 
@@ -60,7 +60,7 @@ The controls are the original game's. The port adds:
 
 | Button | Action |
 | --- | --- |
-| **−** + **R3** | Open and close the port menu |
+| **L3** + **R3** | Open and close the port menu |
 | Left / right in the menu | Change the option's value |
 
 ## Game version used

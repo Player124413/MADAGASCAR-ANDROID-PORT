@@ -6,7 +6,7 @@
 
 Port por recompilación estática del Madagascar de la Xbox original, ejecutándose de forma nativa en la Switch.
 
-![version](https://img.shields.io/badge/version-0.1.7-blue) ![platform](https://img.shields.io/badge/platform-Nintendo%20Switch-E60012?logo=nintendoswitch&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green) [![Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/gerissoncassiano)
+![version](https://img.shields.io/badge/version-0.1.8-blue) ![platform](https://img.shields.io/badge/platform-Nintendo%20Switch-E60012?logo=nintendoswitch&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green) [![Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/gerissoncassiano)
 
 [Português (BR)](README.md) · [English](README.en.md) · **Español**
 
@@ -32,21 +32,21 @@ Donar es opcional: nadie tiene que donar para jugar, y el proyecto no incluye ni
 
 Jugable desde el menú hasta el gameplay, con audio, vídeos y los efectos de imagen del juego (brillo y desenfoque de profundidad).
 
-Lo que tiene la 0.1.7:
+Lo que tiene la 0.1.8:
 
 - Direct3D 8 reescrito en Vulkan (NVK), sin emular la GPU NV2A.
 - Audio: efectos, voces y música en streaming.
 - Vídeos Bink.
 - Desenfoque de profundidad como en el original: gameplay nítido, fondo de los menús y de la demo desenfocado.
 - Hilos repartidos entre los tres núcleos de la Switch.
-- **Menú del port:** pulsa **−** (Minus) y **R3** a la vez. Resolución de renderizado, filtro de pantalla, brillo, V-Sync, límite de FPS, contador de FPS, filtro anisotrópico, salida de audio y OLED SCREEN BOOST.
+- **Menú del port:** pulsa **L3** y **R3** a la vez (los dos sticks). Resolución de renderizado, filtro de pantalla, brillo, V-Sync, límite de FPS, contador de FPS, filtro anisotrópico, salida de audio y OLED SCREEN BOOST.
 - Barras negras laterales como en el original (el juego es 4:3).
 - Sin overclock.
 
 Problemas conocidos:
 
 - Con el reloj por defecto los FPS aún bajan de 30 en partes del gameplay; con la GPU a 614 MHz se mantienen. Bajar la resolución de renderizado en el menú del port (por ejemplo al 75%) ayuda.
-- La 0.1.7 aún se está probando en la Switch real.
+- La 0.1.8 aún se está probando en la Switch real.
 
 ## Capturas
 
@@ -60,7 +60,7 @@ Los controles son los del juego original. El port añade:
 
 | Botón | Función |
 | --- | --- |
-| **−** + **R3** | Abrir y cerrar el menú del port |
+| **L3** + **R3** | Abrir y cerrar el menú del port |
 | Izquierda / derecha en el menú | Cambiar el valor de la opción |
 
 ## Versión del juego usada

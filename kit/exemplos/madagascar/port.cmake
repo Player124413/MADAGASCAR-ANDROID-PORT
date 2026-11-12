@@ -2,4 +2,4 @@
 set(PORT_NAME madagascar)               # madagascar.nro, in sdmc:/switch/madagascar
 set(PORT_TITLE "Madagascar")
 set(PORT_AUTHOR "RECOMP-GUTO")
-set(PORT_VERSION "0.1.7")
+set(PORT_VERSION "0.1.8")

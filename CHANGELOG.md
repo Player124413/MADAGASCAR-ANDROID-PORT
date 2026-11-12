@@ -2,6 +2,10 @@
 
 Port por recompilação estática feito com o XboxSwitchPortKit (pasta `kit/`): o Direct3D 8 e o DirectSound do Xbox são reescritos em Vulkan (NVK) e no áudio do Switch.
 
+## 0.1.8 — 2026-11-12
+
+- Menu do port só com **L3 + R3** (os dois analógicos); o atalho − + R3 foi removido.
+
 ## 0.1.7 — 2026-11-12
 
 - Desempenho: as threads do jogo, a de renderização e a de áudio agora são distribuídas pelos três núcleos do Switch (antes todas rodavam no núcleo 0).

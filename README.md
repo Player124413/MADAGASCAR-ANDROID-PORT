@@ -6,7 +6,7 @@
 
 Port por recompilação estática do Madagascar do Xbox original, rodando nativo no Switch.
 
-![version](https://img.shields.io/badge/version-0.1.7-blue) ![platform](https://img.shields.io/badge/platform-Nintendo%20Switch-E60012?logo=nintendoswitch&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green) [![Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/gerissoncassiano)
+![version](https://img.shields.io/badge/version-0.1.8-blue) ![platform](https://img.shields.io/badge/platform-Nintendo%20Switch-E60012?logo=nintendoswitch&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green) [![Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/gerissoncassiano)
 
 **Português (BR)** · [English](README.en.md) · [Español](README.es.md)
 
@@ -42,21 +42,21 @@ Doação é opcional: ninguém precisa doar para jogar, e o projeto não inclui 
 
 Jogável do menu ao gameplay, com áudio, vídeos e os efeitos de imagem do jogo (brilho e desfoque de profundidade).
 
-O que a 0.1.7 tem:
+O que a 0.1.8 tem:
 
 - Direct3D 8 reescrito em Vulkan (NVK), sem emular a GPU NV2A.
 - Áudio: efeitos, vozes e música em streaming.
 - Vídeos Bink.
 - Desfoque de profundidade igual ao original: gameplay nítido, fundo dos menus e da demo desfocado.
 - Threads distribuídas pelos três núcleos do Switch.
-- **Menu do port:** aperte **−** (Minus) e **R3** juntos. Resolução de renderização, filtro de tela, brilho, V-Sync, limite de FPS, contador de FPS, filtro anisotrópico, saída de áudio e OLED SCREEN BOOST.
+- **Menu do port:** aperte **L3** e **R3** juntos (os dois analógicos). Resolução de renderização, filtro de tela, brilho, V-Sync, limite de FPS, contador de FPS, filtro anisotrópico, saída de áudio e OLED SCREEN BOOST.
 - Faixas pretas nas laterais como no original (o jogo é 4:3).
 - Sem overclock.
 
 Problemas conhecidos:
 
 - No clock padrão o FPS ainda cai abaixo de 30 em partes do gameplay; com a GPU em 614 MHz fica estável. Baixar a resolução de renderização no menu do port (por exemplo 75%) ajuda.
-- A 0.1.7 ainda está sendo testada no Switch real.
+- A 0.1.8 ainda está sendo testada no Switch real.
 
 ## Capturas
 
@@ -70,7 +70,7 @@ Os controles são os do jogo original. O port acrescenta:
 
 | Botão | Função |
 | --- | --- |
-| **−** + **R3** | Abrir e fechar o menu do port |
+| **L3** + **R3** | Abrir e fechar o menu do port |
 | Esquerda / direita no menu | Mudar o valor da opção |
 
 ## Versão do jogo usada
