@@ -1,0 +1,22 @@
+Madagascar NX Port — third-party notices
+========================================
+
+This repository contains only the port's own code and the XboxSwitchPortKit.
+It does not contain Madagascar (Xbox), its disc files, its executable
+(default.xbe) or any code generated from it. Madagascar is a trademark of
+DreamWorks Animation; the Xbox game was developed by Toys for Bob and
+published by Activision. This project is not affiliated with or endorsed by
+any of them.
+
+Components and their licences:
+
+  kit/sdk/XboxXBE-Recomp/   XboxXBE-Recomp (https://github.com/TGP482/XboxXBE-Recomp),
+                            MIT, with changes for the Switch. Its third-party
+                            notices are in kit/sdk/XboxXBE-Recomp/THIRD_PARTY.txt.
+  kit/exemplos/madagascar/src/common/
+                            Based on Black-Android, MIT
+                            (kit/exemplos/madagascar/LICENSE-Black-Android).
+  Not included, needed to build: Mesa/NVK (MIT), glslang (BSD-3-Clause and
+                            others), Dear ImGui (MIT), toml++ (MIT).
+
+Everything else is MIT licensed (see LICENSE).
