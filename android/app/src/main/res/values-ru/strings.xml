@@ -12,10 +12,14 @@
     <string name="launcher_import_iso">Импортировать Xbox ISO / XISO</string>
     <string name="launcher_import_folder">Импортировать папку с default.xbe</string>
     <string name="launcher_performance">УПРАВЛЕНИЕ И ПРОИЗВОДИТЕЛЬНОСТЬ</string>
-    <string name="launcher_touch_editor">РЕДАКТИРОВАТЬ XBOX-УПРАВЛЕНИЕ</string>
+    <string name="launcher_touch_editor">НАСТРОИТЬ СЕНСОРНОЕ УПРАВЛЕНИЕ</string>
+    <string name="launcher_touch_enabled">Сенсорное управление</string>
+    <string name="launcher_touch_enabled_saved">Сенсорное управление включено. Изменения применятся при следующем запуске.</string>
+    <string name="launcher_touch_disabled_saved">Сенсорное управление выключено для игры с геймпадом. Изменения применятся при следующем запуске.</string>
+    <string name="launcher_touch_save_failed">Не удалось сохранить настройку управления: %1$s</string>
     <string name="launcher_graphics">ГРАФИКА И ПРОИЗВОДИТЕЛЬНОСТЬ</string>
-    <string name="launcher_tip_settings">Перед запуском здесь меняются управление и графика. Оригинальная кнопка Xbox Start в игре также открывает паузу и настройки.</string>
-    <string name="launcher_tip_touch">Сенсорное управление использует оригинальную раскладку кнопок Xbox. Размер, прозрачность и расположение меняются в «Сенсорном управлении».</string>
+    <string name="launcher_tip_settings">Перед запуском здесь меняются управление и графика. Start в игре также открывает паузу и настройки.</string>
+    <string name="launcher_tip_touch">В мобильной раскладке Madagascar есть фиксированный левый стик, A/B/X/Y и Start. Любой видимый элемент можно переместить или изменить его размер.</string>
     <string name="launcher_tip_mali">Для Mali предусмотрены запасные пути Vulkan 1.1, CPU-декодирование DXT и динамическое разрешение.</string>
     <string name="launcher_legal">Игра не входит в приложение. Используйте файлы со своей законно полученной копии Madagascar для Xbox.</string>
     <string name="launcher_version">MADAGASCAR ANDROID  •  ЭКСПЕРИМЕНТАЛЬНАЯ СБОРКА</string>
@@ -34,9 +38,9 @@
     <string name="launcher_startup_no_message">без сообщения</string>
     <string name="launcher_startup_failed">Не удалось открыть лаунчер Madagascar.\n\n%1$s: %2$s\n\nОтчёт сохранён в Android/data/com.player124413.madagascar/files/logs/java-startup-crash.txt.\n\nПришлите его содержимое вместе с моделью телефона и версией Android.</string>
 
-    <!-- Редактор Xbox-сенсорного управления в лаунчере -->
-    <string name="touch_editor_title">Редактирование Xbox-управления</string>
-    <string name="touch_editor_hint">Левый стик закреплён и всегда виден. Нажмите кнопку Xbox и перетащите её; размер меняется кнопками – / +.</string>
+    <!-- Редактор сенсорного управления в лаунчере -->
+    <string name="touch_editor_title">Редактирование сенсорного управления</string>
+    <string name="touch_editor_hint">Левый стик закреплён и всегда виден. Перетаскивайте A, B, X, Y или Start; размер меняется кнопками – / +.</string>
     <string name="touch_editor_selected">Выбрано: %1$s · %2$s</string>
     <string name="touch_editor_visible">ВИДНО</string>
     <string name="touch_editor_hidden">СКРЫТО</string>
@@ -46,23 +50,27 @@
     <string name="touch_editor_reset">Сбросить</string>
     <string name="touch_editor_cancel">Отмена</string>
     <string name="touch_editor_save">Сохранить</string>
-    <string name="touch_editor_reset_done">Восстановлена стандартная раскладка Xbox</string>
-    <string name="touch_editor_select_control">Сначала выберите кнопку Xbox.</string>
+    <string name="touch_editor_reset_done">Восстановлена стандартная раскладка Madagascar</string>
+    <string name="touch_editor_select_control">Сначала выберите элемент управления.</string>
     <string name="touch_editor_stick_required">Левый стик нельзя скрыть.</string>
-    <string name="touch_editor_saved">Раскладка Xbox сохранена. Она применится при следующем запуске.</string>
+    <string name="touch_editor_saved">Раскладка сохранена. Она применится при следующем запуске.</string>
     <string name="touch_editor_save_failed_title">Не удалось сохранить управление</string>
     <string name="touch_editor_save_failed">Не удалось сохранить layout.toml: %1$s</string>
-    <string name="touch_editor_footer">Предпросмотр раскладки Xbox · перетаскивайте кнопки</string>
-    <string name="touch_editor_content_description">Редактор раскладки сенсорного Xbox-управления</string>
+    <string name="touch_editor_footer">Предпросмотр раскладки Madagascar · перетаскивайте элементы</string>
+    <string name="touch_editor_content_description">Редактор раскладки сенсорного управления Madagascar</string>
 
     <!-- Графика в лаунчере -->
     <string name="graphics_title">Графика и производительность</string>
-    <string name="graphics_description">Настройки сохраняются до запуска игры. Динамическое разрешение рекомендуется для стабильной производительности.</string>
+    <string name="graphics_description">Настройки сохраняются до запуска игры. В режиме «Авто» сначала используется Vulkan, а OpenGL ES включается только если Vulkan не запускается; GLES можно выбрать напрямую для проверки драйвера.</string>
     <string name="graphics_performance_section">ПРОИЗВОДИТЕЛЬНОСТЬ</string>
     <string name="graphics_quality_section">КАЧЕСТВО</string>
     <string name="graphics_aspect_ratio">Соотношение сторон</string>
-    <string name="graphics_aspect_fullscreen">На весь экран (растянуть)</string>
-    <string name="graphics_aspect_4_3">Оригинальное 4:3</string>
+    <string name="graphics_renderer">Рендерер</string>
+    <string name="graphics_renderer_auto">Авто — Vulkan, затем запасной OpenGL ES</string>
+    <string name="graphics_renderer_vulkan">Только Vulkan</string>
+    <string name="graphics_renderer_gles">Только OpenGL ES 3.2</string>
+    <string name="graphics_aspect_16_9">Стандартный 16:9</string>
+    <string name="graphics_aspect_21_9">Ультраширокий 21:9</string>
     <string name="graphics_render_scale">Разрешение рендера</string>
     <string name="graphics_screen_filter">Фильтр экрана</string>
     <string name="graphics_brightness">Яркость</string>

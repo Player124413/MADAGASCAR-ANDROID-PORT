@@ -12,10 +12,14 @@
     <string name="launcher_import_iso">Import Xbox ISO / XISO</string>
     <string name="launcher_import_folder">Import folder with default.xbe</string>
     <string name="launcher_performance">CONTROLS AND PERFORMANCE</string>
-    <string name="launcher_touch_editor">EDIT XBOX TOUCH CONTROLS</string>
+    <string name="launcher_touch_editor">EDIT TOUCH CONTROLS</string>
+    <string name="launcher_touch_enabled">Touch controls</string>
+    <string name="launcher_touch_enabled_saved">Touch controls enabled. Changes apply on the next launch.</string>
+    <string name="launcher_touch_disabled_saved">Touch controls disabled for gamepad play. Changes apply on the next launch.</string>
+    <string name="launcher_touch_save_failed">Could not save touch setting: %1$s</string>
     <string name="launcher_graphics">GRAPHICS AND PERFORMANCE</string>
-    <string name="launcher_tip_settings">Edit touch controls and graphics here before launching. The in-game original Xbox Start button also opens pause/options.</string>
-    <string name="launcher_tip_touch">Touch controls use the original Xbox button layout. Their size, opacity and position can be adjusted in Touch Controls.</string>
+    <string name="launcher_tip_settings">Edit touch controls and graphics here before launching. Start opens pause and options in game.</string>
+    <string name="launcher_tip_touch">The Madagascar mobile layout has a fixed left stick, A/B/X/Y and Start. Move or resize every visible control in Touch Controls.</string>
     <string name="launcher_tip_mali">Mali devices use Vulkan 1.1 fallback paths, CPU DXT decoding and dynamic resolution where needed.</string>
     <string name="launcher_legal">The game is not included. Use files from your own legally obtained Xbox copy of Madagascar.</string>
     <string name="launcher_version">MADAGASCAR ANDROID  •  EXPERIMENTAL BUILD</string>
@@ -34,9 +38,9 @@
     <string name="launcher_startup_no_message">no message</string>
     <string name="launcher_startup_failed">Could not open the Madagascar launcher.\n\n%1$s: %2$s\n\nA report was saved to Android/data/com.player124413.madagascar/files/logs/java-startup-crash.txt.\n\nSend its contents with the device model and Android version.</string>
 
-    <!-- Launcher Xbox touch editor -->
-    <string name="touch_editor_title">Edit Xbox touch controls</string>
-    <string name="touch_editor_hint">The left stick is fixed and always visible. Tap an Xbox control, then drag it; use – / + for its size.</string>
+    <!-- Launcher touch editor -->
+    <string name="touch_editor_title">Edit touch controls</string>
+    <string name="touch_editor_hint">The left stick is fixed and always visible. Drag A, B, X, Y or Start; use – / + for size.</string>
     <string name="touch_editor_selected">%1$s selected · %2$s</string>
     <string name="touch_editor_visible">VISIBLE</string>
     <string name="touch_editor_hidden">HIDDEN</string>
@@ -46,23 +50,27 @@
     <string name="touch_editor_reset">Reset</string>
     <string name="touch_editor_cancel">Cancel</string>
     <string name="touch_editor_save">Save</string>
-    <string name="touch_editor_reset_done">Xbox default layout restored</string>
-    <string name="touch_editor_select_control">Select an Xbox control first.</string>
+    <string name="touch_editor_reset_done">Madagascar default layout restored</string>
+    <string name="touch_editor_select_control">Select a touch control first.</string>
     <string name="touch_editor_stick_required">The left stick cannot be hidden.</string>
-    <string name="touch_editor_saved">Xbox touch layout saved. It applies on the next launch.</string>
+    <string name="touch_editor_saved">Touch layout saved. It applies on the next launch.</string>
     <string name="touch_editor_save_failed_title">Could not save controls</string>
     <string name="touch_editor_save_failed">Could not save layout.toml: %1$s</string>
-    <string name="touch_editor_footer">Xbox layout preview · drag buttons to move them</string>
-    <string name="touch_editor_content_description">Xbox touch control layout editor</string>
+    <string name="touch_editor_footer">Madagascar layout preview · drag controls to move them</string>
+    <string name="touch_editor_content_description">Madagascar touch control layout editor</string>
 
     <!-- Launcher graphics settings -->
     <string name="graphics_title">Graphics and performance</string>
-    <string name="graphics_description">These settings are saved before the game starts. Dynamic resolution is the recommended default for stable performance.</string>
+    <string name="graphics_description">These settings are saved before the game starts. Auto keeps Vulkan first and uses OpenGL ES only if Vulkan cannot start; choose GLES directly for driver troubleshooting.</string>
     <string name="graphics_performance_section">PERFORMANCE</string>
     <string name="graphics_quality_section">QUALITY</string>
     <string name="graphics_aspect_ratio">Aspect ratio</string>
-    <string name="graphics_aspect_fullscreen">Full screen (stretch)</string>
-    <string name="graphics_aspect_4_3">Original 4:3</string>
+    <string name="graphics_renderer">Renderer</string>
+    <string name="graphics_renderer_auto">Auto — Vulkan, then OpenGL ES fallback</string>
+    <string name="graphics_renderer_vulkan">Vulkan only</string>
+    <string name="graphics_renderer_gles">OpenGL ES 3.2 only</string>
+    <string name="graphics_aspect_16_9">Standard 16:9</string>
+    <string name="graphics_aspect_21_9">Ultrawide 21:9</string>
     <string name="graphics_render_scale">Render resolution</string>
     <string name="graphics_screen_filter">Screen filter</string>
     <string name="graphics_brightness">Brightness</string>

@@ -201,6 +201,20 @@ public final class LauncherActivity extends Activity {
         touchEditor.setOnClickListener(v -> startActivity(new Intent(this, TouchEditorActivity.class)));
         page.addView(touchEditor, matchWrap());
 
+        TouchLayoutStore.Layout touchLayout = TouchLayoutStore.load(appDirectory);
+        Switch touchEnabled = settingSwitch(touchLayout.enabled);
+        touchEnabled.setOnCheckedChangeListener((button, enabled) -> {
+            touchLayout.enabled = enabled;
+            try {
+                TouchLayoutStore.save(appDirectory, touchLayout);
+                Toast.makeText(this, enabled ? R.string.launcher_touch_enabled_saved : R.string.launcher_touch_disabled_saved,
+                        Toast.LENGTH_SHORT).show();
+            } catch (Exception error) {
+                Toast.makeText(this, getString(R.string.launcher_touch_save_failed, error.getMessage()), Toast.LENGTH_LONG).show();
+            }
+        });
+        addSetting(page, R.string.launcher_touch_enabled, touchEnabled);
+
         Button graphics = button(getString(R.string.launcher_graphics), 0xFF272C23, 0xFFF4F0E7);
         graphics.setOnClickListener(v -> showGraphicsSettings());
         LinearLayout.LayoutParams graphicsParams = matchWrap();
@@ -246,9 +260,12 @@ public final class LauncherActivity extends Activity {
         intro.setPadding(0, 0, 0, dp(8));
         form.addView(intro, matchWrap());
 
-        Spinner aspect = choice(new String[] {getString(R.string.graphics_aspect_fullscreen),
-                getString(R.string.graphics_aspect_4_3)}, config.aspectRatio);
+        Spinner aspect = choice(new String[] {getString(R.string.graphics_aspect_16_9),
+                getString(R.string.graphics_aspect_21_9)}, config.aspectRatio);
         addSetting(form, R.string.graphics_aspect_ratio, aspect);
+        Spinner renderer = choice(new String[] {getString(R.string.graphics_renderer_auto),
+                getString(R.string.graphics_renderer_vulkan), getString(R.string.graphics_renderer_gles)}, config.renderer);
+        addSetting(form, R.string.graphics_renderer, renderer);
         Spinner renderScale = choice(percentChoices(GraphicsSettings.RENDER_SCALES),
                 selectedIndex(GraphicsSettings.RENDER_SCALES, config.renderPercent));
         addSetting(form, R.string.graphics_render_scale, renderScale);
@@ -308,6 +325,7 @@ public final class LauncherActivity extends Activity {
                 .setNegativeButton(R.string.dialog_cancel, null)
                 .setPositiveButton(R.string.graphics_save, (dialog, which) -> {
                     config.aspectRatio = aspect.getSelectedItemPosition();
+                    config.renderer = renderer.getSelectedItemPosition();
                     config.renderPercent = GraphicsSettings.RENDER_SCALES[renderScale.getSelectedItemPosition()];
                     config.screenFilter = filter.getSelectedItemPosition();
                     config.brightness = GraphicsSettings.BRIGHTNESS[brightness.getSelectedItemPosition()];

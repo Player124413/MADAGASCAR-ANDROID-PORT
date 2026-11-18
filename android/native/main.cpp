@@ -28,6 +28,7 @@
 #include "common/options.h"
 #include "core/input.h"
 #include "core/log.h"
+#include "gpu/android_platform.h"
 #include "host.h"
 #include "image_symbols.h"
 #include "kernel/kernel.h"
@@ -123,9 +124,9 @@ namespace app {
 namespace {
 
 const char* kModes[] = {"fullscreen", "borderless", "windowed"};
-// Bump when first-run settings change. Version 4 replaces the soft low-resolution first run with an original-sharp
-// full-resolution frame; players can still deliberately enable dynamic resolution in the launcher.
-constexpr int kDefaults = 4;
+// Bump when first-run settings change. Version 5 replaces legacy stretch/4:3 choices with the two Android
+// presentations: standard 16:9 and ultrawide 21:9.
+constexpr int kDefaults = 5;
 
 std::filesystem::path File() { return ExeDir() / kGame.settings; }
 
@@ -192,7 +193,9 @@ void Load() {
     s.vsync = t["vsync"].value_or(s.vsync);
     s.aniso = t["anisotropic_filtering"].value_or(s.aniso);
     s.join_ip = t["join_ip"].value_or(s.join_ip);
-    bool migrate_sharp_defaults = t["defaults"].value_or(int64_t(0)) < kDefaults;
+    int64_t defaults = t["defaults"].value_or(int64_t(0));
+    bool migrate_sharp_defaults = defaults < 4;
+    bool migrate_aspect = defaults < kDefaults;
     if (migrate_sharp_defaults) PhoneFrameDefaults(s);
     for (const Option& o : kGame.options) {
         if (o.flag) *o.flag = t[o.key].value_or(*o.flag);
@@ -204,6 +207,11 @@ void Load() {
         // users can turn the performance option back on explicitly from the launcher.
         game::Opt().dynamic_resolution = false;
         game::Opt().anti_aliasing = 0;
+    }
+    if (migrate_aspect) {
+        // v4 used 0 for display stretch and 1 for original 4:3. Neither is player-facing now: migrate both safely
+        // to the standard Android 16:9 presentation instead of preserving a pillarboxed game view.
+        game::Opt().aspect_ratio = 0;
     }
 }
 
@@ -246,11 +254,9 @@ Mode Output() {
 }
 
 bool Widescreen() {
-    // 4:3 mode is more than host letterboxing: report a 4:3 television before the Xbox title initializes so it builds
-    // its original projection and HUD. The launcher applies this choice on the next game start.
-    if (game::Opt().aspect_ratio) return false;
-    Mode m = Output();
-    return m.width * 2 >= m.height * 3;  // 3:2 or wider
+    // Both player-facing Android presentation modes are widescreen. The host's own 16:9/21:9 composition is applied
+    // after the game draws; reporting widescreen here keeps the game's projection and HUD in their normal wide mode.
+    return true;
 }
 
 // SSAA renders twice as wide and high, the present averaging each 2x2 back to a pixel
@@ -365,6 +371,9 @@ int main(int, char**) {
     }
     logx::Init((app::ExeDir() / "logs").string(), app::kGame.log);
     app::Load();
+    // This is latched before the XBE creates D3D: Auto keeps Vulkan first, while OpenGL ES remains available for a
+    // phone with a broken or absent Vulkan path.
+    gpu::SetRendererChoice(int(game::Opt().renderer));
     if (app::kGame.init) app::kGame.init();
     app::LogSystem();
 

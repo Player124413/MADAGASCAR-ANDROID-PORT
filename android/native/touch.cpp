@@ -566,6 +566,11 @@ constexpr float kScopeX5 = 0.36f;  // and under this its X5, between X2's 0.5 an
 constexpr size_t kButtonCount = std::size(kButtons);
 constexpr size_t kStick = kButtonCount;  // the stick's place, after the buttons'
 
+// The only gameplay buttons the Android port presents. The underlying array intentionally retains every old ID so
+// existing layout.toml files continue to parse without shifting a stored control's index.
+constexpr bool MinimalButton(size_t i) { return i == 4 || i == 5 || i == 7 || i == 12 || i == 15; }
+constexpr bool VisibleControl(size_t i) { return i == kStick || MinimalButton(i); }
+
 // where a control sits: its centre as shares of the screen's width and height, its radius in screen heights
 struct Place {
     float x, y, r;
@@ -611,13 +616,25 @@ constexpr Layout kFourFinger = {{
     {0.655f, 0.38f, 0.045f},
     {0.13f, 0.72f, 0.12f},
 }};
+// A deliberately compact Android-port layout: one fixed movement stick, the four face buttons and a smaller Start.
+// The legacy entries above keep their array indices so old layout.toml files remain readable, but they are not exposed.
+constexpr Layout kMadagascar = [] {
+    Layout layout = kTwoFinger;
+    layout[4] = {0.920f, 0.700f, 0.068f};   // B
+    layout[5] = {0.820f, 0.595f, 0.068f};   // X
+    layout[7] = {0.920f, 0.850f, 0.068f};   // A
+    layout[12] = {0.500f, 0.090f, 0.038f};  // Start: intentionally smaller
+    layout[15] = {0.820f, 0.840f, 0.068f};  // Y
+    layout[kButtonCount] = {0.140f, 0.735f, 0.130f};  // fixed left stick
+    return layout;
+}();
+
 struct Preset {
     const char* id;
     const char* label;
     const Layout* places;
 };
-constexpr Preset kPresets[] = {
-    {"default", "DEFAULT", &kTwoFinger}, {"three", "3 FINGER", &kThreeFinger}, {"four", "4 FINGER", &kFourFinger}};
+constexpr Preset kPresets[] = {{"default", "DEFAULT", &kMadagascar}};
 
 constexpr float kStickZone = 0.42f;    // share of the width from the left a touch takes the stick in
 constexpr float kLookCounts = 1800.0f;  // mouse counts a swipe across the screen's width turns: 90 degrees
@@ -657,20 +674,19 @@ std::atomic<uint64_t> g_touch_ms{0};
 std::atomic<uint64_t> g_back_until{0};  // the back key's tap of Start or B lasts until then
 constexpr uint64_t kBackTapMs = 120;
 
-// The Android port deliberately uses the original Xbox artwork. The atlas also contains an alternate clean set,
-// but it is not selectable: controller glyphs stay recognisable across every saved layout.
-
-// the layout in use, under g_lock
-Layout g_layout = kTwoFinger;
+// The layout in use, under g_lock. The control art is original Madagascar-inspired mobile UI, not Xbox artwork.
+Layout g_layout = kMadagascar;
 size_t g_preset = 0;
 float g_opacity = 0.85f;
 float g_scale = 1.0f;  // every control's size, on top of its own
 // Keep the left stick fixed and visible. A floating, thumb-only stick is too easy to lose on a touch screen.
 bool g_fixed_stick = true;
+// Written by the launcher. Disabled means no virtual buttons, stick, camera drag or touch cursor is consumed.
+bool g_enabled = true;
 bool g_loaded = false;
 // the editor: the layout before it opened (for Cancel), the control picked
 std::atomic<bool> g_editing{false};
-Layout g_before = kTwoFinger;
+Layout g_before = kMadagascar;
 float g_before_opacity = 0.85f;
 size_t g_before_preset = 0;
 int g_selected = -1;
@@ -688,24 +704,25 @@ float Height() {
 
 std::filesystem::path LayoutFile() { return app::ExeDir() / "layout.toml"; }
 
+constexpr int kLayoutVersion = 2;
+
 void LoadLayout() {
     g_loaded = true;
     try {
         toml::table t = toml::parse_file(LayoutFile().string());
-        std::string preset = t["preset"].value_or(std::string("default"));
-        for (size_t i = 0; i < std::size(kPresets); i++)
-            if (preset == kPresets[i].id) g_preset = i;
-        g_layout = *kPresets[g_preset].places;
+        int64_t version = t["layout_version"].value_or(int64_t(0));
+        // Version 2 is the six-control Madagascar layout. Earlier Xbox-era files remain parseable but migrate to a
+        // clean, usable minimal layout rather than leaving invisible legacy buttons in a player's way.
+        g_preset = 0;
+        g_layout = kMadagascar;
         g_opacity = std::clamp(float(t["opacity"].value_or(double(g_opacity))), 0.2f, 1.0f);
         g_scale = std::clamp(float(t["scale"].value_or(double(g_scale))), 0.5f, 1.5f);
-        // This port intentionally uses only the original Xbox button artwork. An old custom/classic/clean skin
-        // value is intentionally ignored so an update cannot silently bring a non-Xbox skin back.
-        // Old layouts may say "floating". The Android port now keeps the left Xbox stick visible and fixed, so
-        // an update immediately repairs that confusing/invisible layout mode.
+        g_enabled = t["enabled"].value_or(true);
         g_fixed_stick = true;
+        if (version < kLayoutVersion) return;
         for (size_t i = 0; i <= kButtonCount; i++) {
-            // the menus' controls are not in the editor: always the preset's
-            if (i != kStick && kButtons[i].when == When::Menus) continue;
+            // Retain legacy entries on disk, but only load coordinates for controls this Android UI deliberately draws.
+            if (!VisibleControl(i)) continue;
             const char* id = i == kStick ? "stick" : kButtons[i].id;
             const toml::table* p = t["controls"][id].as_table();
             if (!p) continue;
@@ -713,7 +730,7 @@ void LoadLayout() {
             pl.x = std::clamp(float((*p)["x"].value_or(double(pl.x))), 0.0f, 1.0f);
             pl.y = std::clamp(float((*p)["y"].value_or(double(pl.y))), 0.0f, 1.0f);
             pl.r = std::clamp(float((*p)["r"].value_or(double(pl.r))), 0.02f, 0.25f);
-            pl.hidden = (*p)["hidden"].value_or(false) && i != kStick && !kButtons[i].keep;
+            pl.hidden = (*p)["hidden"].value_or(false) && i != kStick;
         }
     } catch (...) {
     }
@@ -726,8 +743,9 @@ void SaveLayout() {
         controls.insert(i == kStick ? "stick" : kButtons[i].id,
                         toml::table{{"x", double(p.x)}, {"y", double(p.y)}, {"r", double(p.r)}, {"hidden", p.hidden}});
     }
-    // The button skin is fixed to the original Xbox artwork, so it is not a player-selectable layout value.
-    toml::table t{{"preset", kPresets[g_preset].id}, {"opacity", double(g_opacity)}, {"scale", double(g_scale)},
+    // Keep every historical ID in the file for migration compatibility, alongside the new portable layout version.
+    toml::table t{{"layout_version", int64_t(kLayoutVersion)}, {"preset", kPresets[g_preset].id},
+                  {"enabled", g_enabled}, {"opacity", double(g_opacity)}, {"scale", double(g_scale)},
                   {"stick", "fixed"}, {"controls", controls}};
     std::ofstream(LayoutFile()) << t << "\n";
 }
@@ -748,8 +766,8 @@ bool InMenus() { return input::g_menu; }
 
 bool ButtonShown(size_t i) {
     const Button& b = kButtons[i];
-    if (b.when == When::Hidden) return false;
-    if (g_editing) return b.when != When::Menus;
+    if (!MinimalButton(i) || b.when == When::Hidden) return false;
+    if (g_editing) return true;
     if (g_layout[i].hidden) return false;
     if (i == kZoomButton && !(game::g_zoom < kScoped)) return false;
     if (b.when == When::Always) return true;
@@ -1162,6 +1180,14 @@ bool OnEvent(const SDL_Event& e) {
             float x = e.tfinger.x * Width(), y = e.tfinger.y * Height();
             std::lock_guard lock(g_lock);
             EnsureLayout();
+            if (!g_enabled) {
+                // A gamepad-only launcher choice must also suppress free look and menu touch, not merely hide art.
+                g_fingers.clear();
+                std::fill(std::begin(g_pressed), std::end(g_pressed), false);
+                g_stick_x = g_stick_y = g_look_x = g_look_y = 0;
+                input::g_touch = false;
+                return false;
+            }
             if (e.type == SDL_EVENT_FINGER_DOWN) {
                 // the settings panel takes the touches, but for the button that closes it
                 if (app::MenuOpen() && !g_editing) {
@@ -1186,6 +1212,8 @@ bool OnEvent(const SDL_Event& e) {
 void Apply(int port, input::Pad& pad) {
     if (port != 0 || g_editing) return;
     std::lock_guard lock(g_lock);
+    EnsureLayout();
+    if (!g_enabled) return;
     Recount();  // a held dpad arrow's steps go by the clock
     bool used = false;
     for (size_t i = 0; i < kButtonCount; i++) {
@@ -1219,7 +1247,7 @@ void Apply(int port, input::Pad& pad) {
     if (used) pad.connected = true;
 }
 
-bool Shown() { return !PadPlugged() || NowMs() - g_touch_ms < kShownMs; }
+bool Shown() { return g_enabled && (!PadPlugged() || NowMs() - g_touch_ms < kShownMs); }
 
 namespace {
 
@@ -1411,9 +1439,9 @@ ImU32 Fade(int r, int g, int b, int a) { return IM_COL32(r, g, b, int(float(a) *
 // The movement control must remain easy to find even when a player deliberately lowers the rest of the HUD opacity.
 ImU32 StickFade(int r, int g, int b, int a) { return IM_COL32(r, g, b, std::max(145, int(float(a) * g_opacity))); }
 
-// ---- fixed Xbox artwork: buttons.png cells follow SkinPart's order. It uses the physical Xbox labels (A/B/X/Y,
-// triggers, sticks, D-pad, Start and Back), never the legacy game-action or clean artwork. Each image is a cell wide
-// and sits at its bottom, so a button's circle is the cell's width across.
+// ---- legacy atlas compatibility ---------------------------------------------------------------
+// Existing installs may still package the former atlas. It is retained for a harmless migration-safe upload path, but
+// the Madagascar touch overlay below is drawn procedurally and never uses this Xbox-era artwork.
 
 enum SkinPart : int { kFire, kAim, kMode, kReload, kCrouch, kMelee, kUse, kGrenade, kWeapon, kHealth, kObjectives,
                       kPause, kGyroPart, kBackPart, kSuppressor, kStickBase, kStickKnob, kDpadLeft, kSkinParts,
@@ -1453,10 +1481,9 @@ SkinPart PartOf(Icon icon) {
     }
 }
 
-// the original Xbox images are always in use when the atlas loaded
 bool Skinned() { return g_skin_texture; }
 
-// a part of the original Xbox skin, its circle of radius r about c
+// A legacy atlas cell. The new overlay no longer calls this helper.
 void SkinImage(ImDrawList* dl, SkinPart part, ImVec2 c, float r, ImU32 tint) {
     int i = part;
     float u = float(i % kSkinColumns) * kSkinCellW, v = float(i / kSkinColumns) * kSkinCellH;
@@ -1466,7 +1493,7 @@ void SkinImage(ImDrawList* dl, SkinPart part, ImVec2 c, float r, ImU32 tint) {
 }
 
 void DrawStick(ImDrawList* dl, float th) {
-    // The fixed Xbox left stick is always drawn at its saved position, then its knob follows the thumb while held.
+    // A fixed, bright jungle-green movement pad stays visible before a thumb touches it.
     float r = Radius(kStick);
     ImVec2 at(g_layout[kStick].x * Width(), g_layout[kStick].y * Height());
     bool held = false;
@@ -1475,32 +1502,46 @@ void DrawStick(ImDrawList* dl, float th) {
             at = ImVec2(f.x0, f.y0);
             held = true;
         }
-    if (Skinned()) {
-        // the ring with its arrows is the knob, about seven tenths of the base; it travels half the base's radius
-        constexpr float kKnob = 0.72f, kTravel = 0.5f;
-        SkinImage(dl, kStickBase, at, r, StickFade(255, 255, 255, held ? 255 : 235));
-        ImVec2 knob(at.x + g_stick_x * r * kTravel, at.y - g_stick_y * r * kTravel);
-        SkinImage(dl, kStickKnob, knob, r * kKnob, StickFade(255, 255, 255, held ? 255 : 245));
-        return;
-    }
-    dl->AddCircleFilled(at, r, StickFade(0, 0, 0, held ? 150 : 125), 64);
-    dl->AddCircle(at, r, StickFade(255, 255, 255, held ? 230 : 205), 64, th * 0.7f);
-    for (int i = 0; i < 4; i++) {  // the four directions
+    dl->AddCircleFilled(at, r, StickFade(20, 82, 58, held ? 215 : 170), 64);
+    dl->AddCircle(at, r, StickFade(242, 202, 91, held ? 255 : 225), 64, th * 1.2f);
+    dl->AddCircle(at, r * 0.70f, StickFade(145, 214, 126, held ? 230 : 180), 64, th * 0.7f);
+    for (int i = 0; i < 4; i++) {
         float a = i * kPi / 2;
         ImVec2 tip(at.x + std::cos(a) * r * 0.86f, at.y + std::sin(a) * r * 0.86f);
-        ImVec2 l(at.x + std::cos(a + 0.12f) * r * 0.74f, at.y + std::sin(a + 0.12f) * r * 0.74f);
-        ImVec2 rr(at.x + std::cos(a - 0.12f) * r * 0.74f, at.y + std::sin(a - 0.12f) * r * 0.74f);
-        dl->AddTriangleFilled(tip, l, rr, StickFade(255, 255, 255, held ? 220 : 175));
+        ImVec2 l(at.x + std::cos(a + 0.16f) * r * 0.70f, at.y + std::sin(a + 0.16f) * r * 0.70f);
+        ImVec2 rr(at.x + std::cos(a - 0.16f) * r * 0.70f, at.y + std::sin(a - 0.16f) * r * 0.70f);
+        dl->AddTriangleFilled(tip, l, rr, StickFade(255, 235, 150, held ? 235 : 190));
     }
-    ImVec2 knob(at.x + g_stick_x * r, at.y - g_stick_y * r);
-    dl->AddCircleFilled(knob, r * 0.42f, StickFade(255, 255, 255, held ? 210 : 180), 48);
-    dl->AddCircle(knob, r * 0.42f, StickFade(255, 255, 255, held ? 255 : 230), 48, th * 0.7f);
+    ImVec2 knob(at.x + g_stick_x * r * 0.48f, at.y - g_stick_y * r * 0.48f);
+    dl->AddCircleFilled(knob, r * 0.43f, StickFade(53, 139, 88, held ? 255 : 225), 48);
+    dl->AddCircle(knob, r * 0.43f, StickFade(255, 239, 173, 255), 48, th);
 }
 
 // a text centred on a point, its height a share of the screen's
 void CentredText(ImDrawList* dl, ImVec2 at, float size, ImU32 colour, const char* text) {
     ImVec2 ts = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0, text);
     dl->AddText(ImGui::GetFont(), size, ImVec2(at.x - ts.x / 2, at.y - ts.y / 2), colour, text);
+}
+
+const char* FaceLabel(size_t i) {
+    switch (i) {
+        case 4: return "B";
+        case 5: return "X";
+        case 7: return "A";
+        case 12: return "START";
+        case 15: return "Y";
+        default: return "";
+    }
+}
+
+ImU32 FaceColour(size_t i, int alpha) {
+    switch (i) {
+        case 4: return Fade(231, 105, 75, alpha);   // coral B
+        case 5: return Fade(82, 171, 206, alpha);   // lagoon X
+        case 7: return Fade(81, 172, 111, alpha);   // leaf A
+        case 15: return Fade(244, 190, 67, alpha);  // sunshine Y
+        default: return Fade(137, 91, 55, alpha);   // carved-wood Start
+    }
 }
 
 // the editor's bar, drawn as the controls are: Reset, Cancel, Done, and what to do under it
@@ -1530,6 +1571,7 @@ void DrawEditorBar(ImDrawList* dl, float th) {
 void Draw() {
     std::lock_guard lock(g_lock);
     EnsureLayout();
+    if (!g_enabled) return;
     bool editing = g_editing;
     if (!editing && !Shown()) return;
     ImDrawList* dl = ImGui::GetForegroundDrawList();
@@ -1545,29 +1587,15 @@ void Draw() {
         bool hidden = g_layout[i].hidden;
         bool on = !editing && (g_pressed[i] || (b.press == kGyro && gyro::CurrentMode() != gyro::kOff));
         int fade = hidden ? 40 : 100;  // a hidden control shows faint in the editor
-        if (Skinned()) {
-            // pressed in a little and lit; the icons the skin has none of (the menus' arrows, the scope's zoom) drawn
-            // on its plain circle in its colours
-            float k = on ? 0.92f : 1.0f;
-            ImU32 tint = Fade(255, 255, 255, on ? 255 : 215 * fade / 100);
-            SkinPart part = PartOf(b.icon);
-            SkinImage(dl, part == kNoPart ? kStickBase : part, ImVec2(cx, cy), r * k, tint);
-            if (part == kNoPart) {
-                ImU32 ink = (kSkinInk & ~IM_COL32_A_MASK) | (tint & IM_COL32_A_MASK);
-                DrawIcon({dl, ImVec2(cx, cy), r * k * 0.8f, ink, th * 1.4f}, b.icon);
-            }
-        } else {
-            dl->AddCircleFilled(ImVec2(cx, cy), r, on ? Fade(255, 255, 255, 70) : Fade(0, 0, 0, 80 * fade / 100), 48);
-            dl->AddCircle(ImVec2(cx, cy), r, Fade(255, 255, 255, 60 * fade / 100), 48, th * 0.6f);
-            DrawIcon({dl, ImVec2(cx, cy), r, on ? Fade(255, 255, 255, 230) : Fade(255, 255, 255, 180 * fade / 100), th},
-                     b.icon);
-        }
-        if (b.press == kGyro) {
-            const char* mode = gyro::ModeName();
-            float fs = r * 0.55f;
-            ImVec2 ts = ImGui::GetFont()->CalcTextSizeA(fs, FLT_MAX, 0, mode);
-            dl->AddText(ImGui::GetFont(), fs, ImVec2(cx - ts.x / 2, cy + r * 1.08f), Fade(255, 255, 255, 180), mode);
-        }
+        // Madagascar's mobile UI uses colorful, soft toy-like face buttons rather than Xbox artwork.
+        float k = on ? 0.91f : 1.0f;
+        ImVec2 at(cx, cy);
+        dl->AddCircleFilled(at, r * k, Fade(46, 48, 33, 190 * fade / 100), 48);
+        dl->AddCircleFilled(at, r * k * 0.89f, FaceColour(i, on ? 255 : 220 * fade / 100), 48);
+        dl->AddCircle(at, r * k * 0.89f, Fade(255, 237, 172, 240 * fade / 100), 48, th * 0.85f);
+        dl->AddCircleFilled(ImVec2(cx - r * 0.20f, cy - r * 0.24f), r * 0.18f, Fade(255, 255, 255, 72 * fade / 100), 20);
+        const char* label = FaceLabel(i);
+        CentredText(dl, at, r * (i == 12 ? 0.31f : 0.76f), Fade(255, 255, 244, 255 * fade / 100), label);
         if (editing && int(i) == g_selected) dl->AddCircle(ImVec2(cx, cy), r + th * 2, IM_COL32(255, 200, 60, 255), 48, th * 1.5f);
         if (editing && hidden) {
             float k = r * 0.6f;
@@ -1594,6 +1622,7 @@ namespace {
 bool Custom() {
     const Layout& preset = *kPresets[g_preset].places;
     for (size_t i = 0; i <= kButtonCount; i++) {
+        if (!VisibleControl(i)) continue;
         const Place& a = g_layout[i];
         const Place& b = preset[i];
         if (std::fabs(a.x - b.x) > 1e-4f || std::fabs(a.y - b.y) > 1e-4f || std::fabs(a.r - b.r) > 1e-4f ||

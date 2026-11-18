@@ -14,8 +14,8 @@ inline constexpr const char* kLanguages[] = {"int", "fra", "deu", "ita", "esp", 
 struct Options {
     bool skip_intros = false;  // logos at boot and the film after pressing start
     bool fps_counter = false;
-    // 0 fills the phone's landscape screen; 1 is the original 4:3 frame centred with black side bars.
-    // This is read before boot too, so the Xbox title receives the matching TV mode instead of only cropping the host.
+    // 0 is the standard Android widescreen 16:9 picture; 1 is the 21:9 ultrawide presentation.
+    // This is read before boot so the title consistently uses its widescreen projection.
     uint32_t aspect_ratio = 0;
     uint32_t fmv_scale = 0;  // 4:3 films on a wider screen: 0 fill it, top and bottom cut; 1 kept 4:3
     // a look over the frame: 0 none, 1 and 2 a CRT (light, strong), 3 sharpen, 4 vibrant, 5 noir, 6 sepia,
@@ -27,6 +27,8 @@ struct Options {
     bool fog = true;
     uint32_t anti_aliasing = 0;  // 0 off, 1 FXAA, 2 2x SSAA
     bool hdr = false;
+    // 0 Auto (Vulkan then GLES fallback), 1 Vulkan only, 2 OpenGL ES 3.2 only.
+    uint32_t renderer = 0;
     // Keep the original frame sharp by default. Dynamic downscaling remains available in the launcher for phones that need it.
     bool dynamic_resolution = false;
     uint32_t dynamic_target_fps = 30;

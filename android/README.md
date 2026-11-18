@@ -1,6 +1,6 @@
 # Madagascar for Android
 
-This directory builds an **ARM64 Android Vulkan host** for the Madagascar static recompilation.  It deliberately contains neither the Xbox game files nor generated output from them.
+This directory builds an **ARM64 Android host** for the Madagascar static recompilation. Vulkan is preferred; an OpenGL ES 3.2 backend is included for explicit selection or automatic fallback when Vulkan cannot initialize. It deliberately contains neither the Xbox game files nor generated output from them.
 
 > **Status — implementation preview.** The Android launcher, native SDL3/Vulkan host, import flow, touch editor and compatibility paths are in source control. This checkout has no Android SDK/NDK, Java, game XBE, or recompiler output, so an APK and physical-device run have **not** been built or verified here. In particular, Mali behaviour still needs device testing before it can be claimed artifact-free.
 
@@ -8,15 +8,16 @@ This directory builds an **ARM64 Android Vulkan host** for the Madagascar static
 
 - A two-stage app: a scoped-storage launcher followed by the full-screen SDL3 game activity. The launcher and import dialogs use the phone locale (English by default, Russian for `ru` locales), and its first-run credits dialog links to the port/channel and upstream project.
 - Safe import of a legal Xbox ISO (`.part` copy then atomic replacement) or of an extracted folder containing `default.xbe` (staging directory then replacement). Existing files remain untouched if an import fails or is cancelled.
-- An Android SDL3/Vulkan renderer based on the permitted Black-Android reference, adapted to the Madagascar source tree:
+- Android GPU renderers, with **Vulkan preferred** and an **OpenGL ES 3.2** renderer adapted from the user-supplied [`Player124413/Helpful-things`](https://github.com/Player124413/Helpful-things) source:
+  - renderer setting: Auto (Vulkan, then GLES fallback), Vulkan only, or OpenGL ES 3.2 only;
   - Vulkan 1.1 minimum with render-pass fallback if dynamic rendering is unavailable;
   - fence fallback rather than timeline semaphores on Vulkan 1.1 devices (including the documented Mali-G76 failure case);
   - CPU DXT1/3/5 decode if BC texture compression is unavailable;
   - shader specialization for opaque texture/sampler parameters, avoiding the malformed SPIR-V path that causes corruption on affected Mali drivers;
   - surface/swapchain recreation, bounded acquire waits, shader and pipeline caches, texture retirement, and 16 KiB ELF page alignment;
   - optional dynamic internal resolution with a conservative 30 FPS target when the player enables it.
-- Original-Xbox touch controls: the on-screen artwork is fixed to the physical Xbox labels and colours (A/B/X/Y, LT/RT, sticks, D-pad, Start and Back) and maps only to original Xbox inputs. The fixed left stick is always visible, even at low HUD opacity; deliberate movement clears its dead zone, including a downward pull for backward movement. Drag a free part of the gameplay screen to send the original right-stick camera input. The launcher has a landscape drag editor: tap a control, drag it, resize it with – / +, hide/show it, reset or save. Its bottom tool strip never covers the editable preview. It writes `layout.toml` before the next game launch; non-Xbox gyro and gear overlays stay hidden.
-- Display choices for the original picture: the launcher can use the original 4:3 game frame with black side bars or stretch it across the full landscape screen. New and migrated installs render at full resolution with no automatic dynamic downscale or host-added soft-focus blur; dynamic resolution, anti-aliasing and filters remain explicit opt-in choices.
+- Madagascar-style mobile touch controls: the default visible overlay is exactly a fixed **left stick**, **A**, **B**, **X**, **Y**, and a deliberately smaller **Start** button. The colorful cartoon treatment replaces the previous Xbox-art overlay; a free part of the gameplay screen remains a camera/look drag area, not another visible control. The stick stays visible, including at low HUD opacity; deliberate downward movement remains backward movement. The launcher has a landscape drag editor for all six elements: choose one, drag it, resize it with – / +, hide/show it, reset or save. Its bottom tool strip never covers the editable preview. The launcher also has a **Touch controls** switch that fully disables virtual controls, touch camera drag and touch menu input for clean gamepad play. Versioned `layout.toml` migration retains legacy IDs on disk while resetting old multi-button Xbox layouts to the new mobile default.
+- Display choices: the launcher exposes only **standard 16:9** and **ultrawide 21:9**. Existing stretch/4:3 settings migrate safely to 16:9. New and migrated installs render at full resolution with no automatic dynamic downscale or host-added soft-focus blur; dynamic resolution, anti-aliasing and filters remain explicit opt-in choices.
 - Gamepad, mouse/keyboard, virtual-controller and controller-gyro routing.
 
 The imported reference code is covered by [`LICENSE-Black-Android`](LICENSE-Black-Android). See the root project notices for the remaining licenses.
@@ -48,7 +49,7 @@ From this directory:
 ./gradlew :app:assembleDebug
 ```
 
-The first Gradle build fetches SDL `release-3.4.16` into `android/third_party/SDL`; CMake fetches glslang, toml++, and Dear ImGui. An internet connection to those upstream repositories is needed for that first configure.
+The first Gradle build fetches SDL `release-3.4.16` into `android/third_party/SDL`; CMake fetches glslang, SPIRV-Cross, toml++, and Dear ImGui. An internet connection to those upstream repositories is needed for that first configure.
 
 For generated files outside the default kit locations, pass absolute paths to Gradle:
 
@@ -101,10 +102,10 @@ The extractor supports a game-partition XISO and an original-disc layout with th
 1. Install the APK. The launcher requests no broad storage permission.
 2. Choose **Import Xbox ISO** or **Import folder with default.xbe**. The selected content is copied into the application’s scoped external-files directory, so the game can read it after the document picker closes.
 3. Tap **Launch game** after the launcher reports that the files are ready.
-4. Before launch, choose **Edit Xbox touch controls** in the launcher. Tap a labelled Xbox control and drag it, use **– Size** / **+ Size**, then save; the launcher writes the same `layout.toml` used by the native host. Choose **Graphics and performance** there to select **Original 4:3** (black side bars) or **Full screen (stretch)**, then set render scale, filters, brightness/OLED, frame cap, v-sync, anisotropic filtering, dynamic-resolution bounds, anti-aliasing, bloom, fog and HDR. Both groups apply on the next game launch.
-5. In game, use the permanently visible left stick to move: push it up to go forward, down to move backward, and sideways to strafe. Drag a free area of the screen with another finger to turn the camera when the game exposes its normal right-stick camera control; this works alongside the movement stick and Xbox action buttons. The original on-screen **Start** control opens the pause/options flow. The compact Touch Controls and Graphics pages remain available for adjustments during play.
+4. Before launch, choose **Edit touch controls** in the launcher. Drag the fixed left stick or one of **A/B/X/Y/Start**, use **– Size** / **+ Size**, then save; the launcher writes the same `layout.toml` used by the native host. Switch **Touch controls** off here for gamepad-only play. Choose **Graphics and performance** to select **Standard 16:9** or **Ultrawide 21:9**, choose Auto/Vulkan/OpenGL ES rendering, then set render scale, filters, brightness/OLED, frame cap, v-sync, anisotropic filtering, dynamic-resolution bounds, anti-aliasing, bloom, fog and HDR. Both groups apply on the next game launch.
+5. In game, use the permanently visible left stick to move: push it up to go forward, down to move backward, and sideways to strafe. Drag a free area of the screen with another finger to turn the camera when the game exposes its normal right-stick camera control; this works alongside the movement stick and five face/start controls. **Start** opens the pause/options flow. The compact Touch Controls and Graphics pages remain available for adjustments during play.
 
-The app uses a landscape, immersive activity and keeps the screen awake while gameplay is active. Back/recents will pause rendering/audio through the SDL lifecycle and recreate the Vulkan surface as necessary.
+The app uses a landscape, immersive activity and keeps the screen awake while gameplay is active. Back/recents will pause rendering/audio through the SDL lifecycle and recreate the active Vulkan or OpenGL ES surface as necessary.
 
 ## Mali validation plan
 

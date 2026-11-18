@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-feature android:glEsVersion="0x00020000" />
-    <!-- Vulkan 1.1; older drivers are handled with render-pass/fence fallbacks where possible. -->
-    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x00401000" android:required="true" />
+    <!-- The optional fallback needs GLES 3.2; Vulkan remains the preferred renderer. -->
+    <uses-feature android:glEsVersion="0x00030002" android:required="false" />
+    <!-- Vulkan is preferred, but it is optional so the bundled OpenGL ES 3.2 fallback remains installable. -->
+    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x00401000" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />

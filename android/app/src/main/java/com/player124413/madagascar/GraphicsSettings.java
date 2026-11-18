@@ -16,8 +16,8 @@ import java.util.regex.Pattern;
 /** Launcher-side editor for the graphics keys read by android/native/main.cpp and game_info.cpp. */
 final class GraphicsSettings {
     static final String FILE_NAME = "madagascar.toml";
-    // Must match android/native/main.cpp. Version 4 removes the old, blurry 67% dynamic-render default.
-    private static final int DEFAULTS_VERSION = 4;
+    // Must match android/native/main.cpp. Version 5 migrates legacy stretch/4:3 choices to the standard 16:9 view.
+    private static final int DEFAULTS_VERSION = 5;
 
     static final int[] RENDER_SCALES = {50, 67, 75, 85, 100};
     static final int[] FPS_CAPS = {30, 45, 60};
@@ -29,7 +29,7 @@ final class GraphicsSettings {
     static final int[] BRIGHTNESS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
     static final class Config {
-        // 0 stretches to the landscape display; 1 keeps the original 4:3 frame with side bars.
+        // 0 is standard 16:9; 1 is the 21:9 ultrawide presentation.
         int aspectRatio;
         int renderPercent = 100;
         int fpsCap = 30;
@@ -42,6 +42,8 @@ final class GraphicsSettings {
         boolean fog = true;
         int antiAliasing;
         boolean hdr;
+        // 0 Auto (Vulkan then GLES fallback), 1 Vulkan only, 2 OpenGL ES 3.2 only.
+        int renderer;
         boolean dynamicResolution;
         int dynamicTargetFps = 30;
         int dynamicMinPercent = 45;
@@ -57,6 +59,7 @@ final class GraphicsSettings {
             brightness = clamp(brightness, 0, 10);
             oledScreen = clamp(oledScreen, 0, 2);
             antiAliasing = clamp(antiAliasing, 0, 2);
+            renderer = clamp(renderer, 0, 2);
             dynamicTargetFps = clamp(dynamicTargetFps, 20, 60);
             dynamicMinPercent = snap(clamp(dynamicMinPercent, 20, 200));
             dynamicMaxPercent = snap(clamp(dynamicMaxPercent, 20, 200));
@@ -86,16 +89,21 @@ final class GraphicsSettings {
             config.fog = bool(text, "fog", config.fog);
             config.antiAliasing = integer(text, "anti_aliasing", config.antiAliasing);
             config.hdr = bool(text, "hdr", config.hdr);
+            config.renderer = integer(text, "renderer", config.renderer);
             config.dynamicResolution = bool(text, "dynamic_resolution", config.dynamicResolution);
             config.dynamicTargetFps = integer(text, "dynamic_target_fps", config.dynamicTargetFps);
             config.dynamicMinPercent = integer(text, "dynamic_min_percent", config.dynamicMinPercent);
             config.dynamicMaxPercent = integer(text, "dynamic_max_percent", config.dynamicMaxPercent);
             config.dynamicHold = integer(text, "dynamic_hold", config.dynamicHold);
-            if (defaults < DEFAULTS_VERSION) {
+            if (defaults < 4) {
                 // The old first-run choice rendered at 67% and then enlarged it, which looks like a blur on a phone.
                 config.renderPercent = 100;
                 config.dynamicResolution = false;
                 config.antiAliasing = 0;
+            }
+            if (defaults < DEFAULTS_VERSION) {
+                // v4 used stretch and original 4:3. The launcher now exposes only its two Android-wide formats.
+                config.aspectRatio = 0;
             }
         } catch (Exception ignored) {
             // The native host also uses conservative defaults when a settings file cannot be parsed.
@@ -124,6 +132,7 @@ final class GraphicsSettings {
         values.put("fog", Boolean.toString(config.fog));
         values.put("anti_aliasing", Integer.toString(config.antiAliasing));
         values.put("hdr", Boolean.toString(config.hdr));
+        values.put("renderer", Integer.toString(config.renderer));
         values.put("dynamic_resolution", Boolean.toString(config.dynamicResolution));
         values.put("dynamic_target_fps", Integer.toString(config.dynamicTargetFps));
         values.put("dynamic_min_percent", Integer.toString(config.dynamicMinPercent));

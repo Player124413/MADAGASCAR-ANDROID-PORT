@@ -17,30 +17,26 @@ import java.util.Locale;
 final class TouchLayoutStore {
     static final String FILE_NAME = "layout.toml";
 
-    // The native array order: all virtual Xbox inputs, followed by the left stick.
+    // The native array order: legacy IDs stay stable for migration, followed by the left stick.
+    private static final int LAYOUT_VERSION = 2;
     static final String[] IDS = {
             "fire", "fire_left", "aim", "mode", "melee", "use", "grenade", "reload", "crouch", "weapon",
             "health", "map", "pause", "gyro", "back", "suppressor", "dpad_up", "dpad_down", "dpad_left",
             "dpad_right", "panel", "enter", "zoom", "stick"
     };
 
-    // Labels deliberately identify the Xbox input rather than the old game-specific artwork.
-    private static final String[] XBOX_LABELS = {
-            "RT", "RT", "R3", "D-PAD ↑", "B", "X", "LT", "A", "L3", "D-PAD →", "D-PAD ↓", "BACK",
-            "START", "GYRO", "B", "Y", "D-PAD ↑", "D-PAD ↓", "D-PAD ←", "D-PAD →", "PANEL", "A",
-            "D-PAD ↑", "LEFT STICK"
+    // Only the six polished mobile controls are exposed. The other IDs stay on disk for old-layout compatibility.
+    private static final String[] CONTROL_LABELS = {
+            "", "", "", "", "B", "X", "", "A", "", "", "", "", "START", "", "", "Y", "", "", "", "", "", "", "", "LEFT STICK"
     };
+    private static final int[] EDITABLE = {4, 5, 7, 12, 15, 23};
 
-    // Controls exposed in the launcher editor. Gyro and the gear/panel are intentionally absent: they are not Xbox
-    // controls and android/native/touch.cpp keeps them hidden as migration-only layout entries.
-    private static final int[] EDITABLE = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 22, 23};
-
-    // Android native defaults: the two-finger preset in android/native/touch.cpp.
+    // Android native defaults: the minimal Madagascar layout in android/native/touch.cpp.
     private static final float[][] DEFAULTS = {
             {0.924f, 0.66f, 0.095f}, {0.059f, 0.40f, 0.065f}, {0.969f, 0.40f, 0.065f}, {0.91f, 0.40f, 0.045f},
-            {0.843f, 0.56f, 0.05f}, {0.789f, 0.40f, 0.055f}, {0.784f, 0.70f, 0.05f}, {0.838f, 0.84f, 0.055f},
+            {0.920f, 0.700f, 0.068f}, {0.820f, 0.595f, 0.068f}, {0.784f, 0.70f, 0.05f}, {0.920f, 0.850f, 0.068f},
             {0.964f, 0.88f, 0.05f}, {0.50f, 0.90f, 0.05f}, {0.559f, 0.90f, 0.045f}, {0.473f, 0.07f, 0.04f},
-            {0.527f, 0.07f, 0.04f}, {0.419f, 0.07f, 0.04f}, {0.036f, 0.08f, 0.045f}, {0.70f, 0.56f, 0.042f},
+            {0.500f, 0.090f, 0.038f}, {0.419f, 0.07f, 0.04f}, {0.036f, 0.08f, 0.045f}, {0.820f, 0.840f, 0.068f},
             {0.11f, 0.60f, 0.048f}, {0.11f, 0.80f, 0.048f}, {0.064f, 0.70f, 0.048f}, {0.156f, 0.70f, 0.048f},
             {0.581f, 0.07f, 0.04f}, {0.92f, 0.78f, 0.07f}, {0.715f, 0.40f, 0.05f}, {0.108f, 0.70f, 0.12f}
     };
@@ -51,6 +47,7 @@ final class TouchLayoutStore {
         final float[] radius = new float[IDS.length];
         final boolean[] hidden = new boolean[IDS.length];
         String preset = "default";
+        boolean enabled = true;
         float opacity = 0.85f;
         float scale = 1.0f;
         Layout() {
@@ -59,6 +56,7 @@ final class TouchLayoutStore {
 
         void reset() {
             preset = "default";
+            enabled = true;
             opacity = 0.85f;
             scale = 1.0f;
             for (int i = 0; i < IDS.length; i++) {
@@ -76,8 +74,8 @@ final class TouchLayoutStore {
         return EDITABLE.clone();
     }
 
-    static String xboxLabel(int index) {
-        return index >= 0 && index < XBOX_LABELS.length ? XBOX_LABELS[index] : "XBOX";
+    static String controlLabel(int index) {
+        return index >= 0 && index < CONTROL_LABELS.length ? CONTROL_LABELS[index] : "CONTROL";
     }
 
     static String controlId(int index) {
@@ -90,6 +88,7 @@ final class TouchLayoutStore {
         if (!file.isFile()) return layout;
 
         int current = -1;
+        int version = 0;
         try (BufferedReader reader = new BufferedReader(new java.io.InputStreamReader(
                 new java.io.FileInputStream(file), StandardCharsets.UTF_8))) {
             for (String raw; (raw = reader.readLine()) != null;) {
@@ -104,7 +103,9 @@ final class TouchLayoutStore {
                 String key = line.substring(0, equals).trim();
                 String value = withoutComment(line.substring(equals + 1)).trim();
                 if (current < 0) {
-                    if ("preset".equals(key)) layout.preset = unquote(value, layout.preset);
+                    if ("layout_version".equals(key)) version = Math.round(number(value, version));
+                    else if ("preset".equals(key)) layout.preset = unquote(value, layout.preset);
+                    else if ("enabled".equals(key)) layout.enabled = "true".equalsIgnoreCase(value);
                     else if ("opacity".equals(key)) layout.opacity = range(number(value, layout.opacity), 0.2f, 1.0f);
                     else if ("scale".equals(key)) layout.scale = range(number(value, layout.scale), 0.5f, 1.5f);
                     // A legacy stick = "floating" value is intentionally ignored: Android always writes fixed.
@@ -119,6 +120,7 @@ final class TouchLayoutStore {
             // A malformed or partially written old layout must never prevent the launcher from opening. The native
             // loader follows the same policy and uses defaults for anything it cannot understand.
         }
+        if (version < LAYOUT_VERSION) layout.reset();
         return layout;
     }
 
@@ -130,6 +132,11 @@ final class TouchLayoutStore {
         File temporary = new File(directory, FILE_NAME + ".new");
         try (Writer out = new OutputStreamWriter(new FileOutputStream(temporary), StandardCharsets.UTF_8)) {
             out.write("# Madagascar Android touch layout. Edited by the launcher.\n");
+            out.write("layout_version = ");
+            out.write(Integer.toString(LAYOUT_VERSION));
+            out.write("\n");
+            out.write("enabled = ");
+            out.write(layout.enabled ? "true\n" : "false\n");
             out.write("preset = \"");
             out.write(layout.preset);
             out.write("\"\n");

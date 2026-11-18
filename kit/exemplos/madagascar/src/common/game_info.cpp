@@ -58,6 +58,7 @@ void Load(const void* table) {
     // Android renderer and its dynamic-resolution state machine can safely use.
     auto grid = [](uint32_t value) { return std::clamp(value, 20u, 200u) / 5u * 5u; };
     o.anti_aliasing = std::min(o.anti_aliasing, 2u);
+    o.renderer = std::min(o.renderer, 2u);
     o.dynamic_target_fps = std::clamp(o.dynamic_target_fps, 20u, 60u);
     o.dynamic_min_percent = grid(o.dynamic_min_percent);
     o.dynamic_max_percent = grid(o.dynamic_max_percent);
@@ -117,6 +118,7 @@ const app::GameInfo app::kGame = {
                 {"fog", &game::Opt().fog, nullptr},
                 {"anti_aliasing", nullptr, &game::Opt().anti_aliasing},
                 {"hdr", &game::Opt().hdr, nullptr},
+                {"renderer", nullptr, &game::Opt().renderer},
                 {"dynamic_resolution", &game::Opt().dynamic_resolution, nullptr},
                 {"dynamic_target_fps", nullptr, &game::Opt().dynamic_target_fps},
                 {"dynamic_min_percent", nullptr, &game::Opt().dynamic_min_percent},

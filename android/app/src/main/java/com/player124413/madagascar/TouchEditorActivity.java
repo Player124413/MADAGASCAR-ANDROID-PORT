@@ -159,7 +159,7 @@ public final class TouchEditorActivity extends Activity {
             return;
         }
         String state = layout.hidden[index] ? getString(R.string.touch_editor_hidden) : getString(R.string.touch_editor_visible);
-        selectedLabel.setText(getString(R.string.touch_editor_selected, TouchLayoutStore.xboxLabel(index), state));
+        selectedLabel.setText(getString(R.string.touch_editor_selected, TouchLayoutStore.controlLabel(index), state));
     }
 
     private GradientDrawableAdapter roundRect(int fill, int radius, int stroke, int width) {
@@ -227,9 +227,9 @@ public final class TouchEditorActivity extends Activity {
             float radius = Math.max(dp(24), layout.radius[index] * layout.scale * height);
             boolean hidden = layout.hidden[index];
             boolean active = index == selected;
-            String label = TouchLayoutStore.xboxLabel(index);
+            String label = TouchLayoutStore.controlLabel(index);
 
-            int fill = xboxColor(label);
+            int fill = madagascarColor(label);
             int alpha = hidden ? 65 : 205;
             paint.setColor((fill & 0x00FFFFFF) | (alpha << 24));
             canvas.drawCircle(cx, cy, radius, paint);
@@ -284,14 +284,14 @@ public final class TouchEditorActivity extends Activity {
             canvas.drawText(label, cx, baseline, paint);
         }
 
-        private int xboxColor(String label) {
-            if ("A".equals(label)) return 0xFF107C10;
-            if ("B".equals(label)) return 0xFFC50F1F;
-            if ("X".equals(label)) return 0xFF107CDB;
-            if ("Y".equals(label)) return 0xFFFFB900;
-            if (label.startsWith("D-PAD")) return 0xFF59655A;
-            if ("START".equals(label) || "BACK".equals(label)) return 0xFF4B564A;
-            return 0xFF596A60;
+        private int madagascarColor(String label) {
+            // Cheerful island colors mirror the in-game mobile overlay rather than the Xbox face-button palette.
+            if ("A".equals(label)) return 0xFF51AC6F;
+            if ("B".equals(label)) return 0xFFE7694B;
+            if ("X".equals(label)) return 0xFF52ABCE;
+            if ("Y".equals(label)) return 0xFFF4BE43;
+            if ("START".equals(label)) return 0xFF895B37;
+            return 0xFF318C5B;
         }
 
         @Override

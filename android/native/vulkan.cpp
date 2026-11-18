@@ -3404,13 +3404,14 @@ VulkanBackend* g_vulkan = nullptr;
 
 }  // namespace
 
-std::unique_ptr<Backend> CreateBackend() {
+// Vulkan remains the preferred Android renderer. renderer.cpp chooses it first in Auto mode and can fall back to GLES.
+std::unique_ptr<Backend> CreateVulkanBackend() {
     auto backend = std::make_unique<VulkanBackend>();
     g_vulkan = backend.get();
     return backend;
 }
 
-void WaitGpuFrame(uint64_t n) {
+void WaitVulkanGpuFrame(uint64_t n) {
     if (g_vulkan) g_vulkan->WaitGpuFrame(n);
 }
 
