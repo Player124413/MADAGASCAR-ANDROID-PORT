@@ -6,7 +6,7 @@ This directory builds an **ARM64 Android Vulkan host** for the Madagascar static
 
 ## What is included
 
-- A two-stage app: a scoped-storage launcher followed by the full-screen SDL3 game activity.
+- A two-stage app: a scoped-storage launcher followed by the full-screen SDL3 game activity. The launcher and import dialogs use the phone locale (English by default, Russian for `ru` locales), and its first-run credits dialog links to the port/channel and upstream project.
 - Safe import of a legal Xbox ISO (`.part` copy then atomic replacement) or of an extracted folder containing `default.xbe` (staging directory then replacement). Existing files remain untouched if an import fails or is cancelled.
 - An Android SDL3/Vulkan renderer based on the permitted Black-Android reference, adapted to the Madagascar source tree:
   - Vulkan 1.1 minimum with render-pass fallback if dynamic rendering is unavailable;
@@ -15,7 +15,7 @@ This directory builds an **ARM64 Android Vulkan host** for the Madagascar static
   - shader specialization for opaque texture/sampler parameters, avoiding the malformed SPIR-V path that causes corruption on affected Mali drivers;
   - surface/swapchain recreation, bounded acquire waits, shader and pipeline caches, texture retirement, and 16 KiB ELF page alignment;
   - dynamic internal resolution with a conservative 30 FPS default.
-- Editable touch controls: three placement presets, opacity and global size, button style, floating/fixed analog stick, gyroscope aiming, and an in-game drag/resize/hide editor persisted in `layout.toml`.
+- Original-Xbox touch controls: the on-screen artwork is fixed to the Xbox layout and maps to original Xbox inputs. Three placement presets, opacity, global size, fixed/floating analog stick and a drag/resize/hide editor remain available in `layout.toml`; non-Xbox gyro and gear overlays are hidden.
 - Gamepad, mouse/keyboard, virtual-controller and controller-gyro routing.
 
 The imported reference code is covered by [`LICENSE-Black-Android`](LICENSE-Black-Android). See the root project notices for the remaining licenses.
@@ -100,7 +100,7 @@ The extractor supports a game-partition XISO and an original-disc layout with th
 1. Install the APK. The launcher requests no broad storage permission.
 2. Choose **Import Xbox ISO** or **Import folder with default.xbe**. The selected content is copied into the application’s scoped external-files directory, so the game can read it after the document picker closes.
 3. Tap **Launch game** after the launcher reports that the files are ready.
-4. In game, use the on-screen gear/settings control. The **Touch Controls** page has layouts, opacity, size, button style, analog-stick mode and the layout editor. The graphics page has dynamic resolution, render scale bounds, fog/bloom and anti-aliasing controls.
+4. In game, use the original on-screen **Start** control to open the pause/options flow. The **Touch Controls** page has Xbox layout presets, opacity, size, analog-stick mode and the layout editor. Settings are divided into short categories rather than one long mobile scroll list; the graphics page has dynamic resolution, render scale bounds, fog/bloom and anti-aliasing controls.
 
 The app uses a landscape, immersive activity and keeps the screen awake while gameplay is active. Back/recents will pause rendering/audio through the SDL lifecycle and recreate the Vulkan surface as necessary.
 

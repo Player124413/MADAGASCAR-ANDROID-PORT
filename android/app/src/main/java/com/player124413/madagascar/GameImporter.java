@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.function.Consumer;
 
-// Copies a disc image (.iso) the player picks with Android's file picker (Downloads, a cloud drive, a USB stick)
+// Copies a disc image (.iso or .xiso) the player picks with Android's file picker (Downloads, a cloud drive, a USB stick)
 // into the folder the game is read from. The copy is written as .part and renamed at the end: the game looks for
 // any .iso there every second and would open a half written one.
 final class GameImporter {
@@ -53,7 +53,7 @@ final class GameImporter {
             activity.startActivityForResult(i, REQUEST);
             return true;
         } catch (ActivityNotFoundException e) {
-            message("Импорт игры", "На устройстве нет файлового менеджера для выбора образа диска.", null);
+            message(activity.getString(R.string.import_game), activity.getString(R.string.import_no_file_manager), null);
             return false;
         }
     }
@@ -62,17 +62,17 @@ final class GameImporter {
     void copy(Uri uri, File dir, Consumer<Boolean> done) {
         String name = displayName(uri);
         long size = size(uri);
-        if (name == null || !name.toLowerCase(Locale.ROOT).endsWith(".iso")) {
-            message("Импорт игры", "Выберите образ диска игры — файл с расширением .iso.", () -> done.accept(false));
+        if (!isDiscImageName(name)) {
+            message(activity.getString(R.string.import_game), activity.getString(R.string.import_choose_image), () -> done.accept(false));
             return;
         }
         if (!dir.isDirectory() && !dir.mkdirs()) {
-            message("Импорт игры", "Не удалось создать папку для файлов игры.", () -> done.accept(false));
+            message(activity.getString(R.string.import_game), activity.getString(R.string.import_create_folder_failed), () -> done.accept(false));
             return;
         }
         if (size > 0 && dir.getUsableSpace() < size + (64L << 20)) {
-            message("Недостаточно места", String.format(Locale.ROOT,
-                    "Для образа нужно %.1f ГБ свободного места, доступно %.1f ГБ.", size / 1e9,
+            message(activity.getString(R.string.import_not_enough_space), String.format(Locale.getDefault(),
+                    activity.getString(R.string.import_space_needed), size / 1e9,
                     dir.getUsableSpace() / 1e9), () -> done.accept(false));
             return;
         }
@@ -81,7 +81,7 @@ final class GameImporter {
         bar.setMax(1000);
         bar.setIndeterminate(size <= 0);
         TextView text = new TextView(activity);
-        text.setText("Подготовка…");
+        text.setText(R.string.import_preparing);
         LinearLayout box = new LinearLayout(activity);
         box.setOrientation(LinearLayout.VERTICAL);
         int pad = Math.round(20 * activity.getResources().getDisplayMetrics().density);
@@ -90,10 +90,10 @@ final class GameImporter {
         box.addView(text);
         cancelled = false;
         AlertDialog progress = new AlertDialog.Builder(activity)
-                .setTitle("Импорт: " + name)
+                .setTitle(activity.getString(R.string.import_image_title, name))
                 .setView(box)
                 .setCancelable(false)
-                .setNegativeButton("Отмена", (d, w) -> cancelled = true)
+                .setNegativeButton(R.string.dialog_cancel, (d, w) -> cancelled = true)
                 .show();
         progress.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -108,7 +108,7 @@ final class GameImporter {
                  FileInputStream in = new FileInputStream(pfd.getFileDescriptor());
                  FileChannel src = in.getChannel()) {
                 if (isXboxImage(src) == Boolean.FALSE) {
-                    error = name + " не является образом диска Xbox.";
+                    error = activity.getString(R.string.import_not_xbox_image, name);
                 } else {
                     try (FileOutputStream out = new FileOutputStream(part); FileChannel dst = out.getChannel()) {
                         ByteBuffer buf = ByteBuffer.allocateDirect(BUFFER);
@@ -124,12 +124,12 @@ final class GameImporter {
                             }
                         }
                         out.getFD().sync();
-                        if (!cancelled && size > 0 && copied != size) error = "Копирование завершилось раньше времени.";
+                        if (!cancelled && size > 0 && copied != size) error = activity.getString(R.string.import_copy_ended_early);
                     }
                 }
             } catch (Exception e) {
                 Log.w(TAG, "import failed", e);
-                error = "Ошибка копирования: " + e.getMessage();
+                error = activity.getString(R.string.import_copy_error, e.getMessage());
             }
             boolean ok = false;
             if (error == null && !cancelled) {
@@ -140,7 +140,7 @@ final class GameImporter {
             }
             if (!ok) {
                 part.delete();
-                if (error == null && !cancelled) error = "Не удалось сохранить образ в папке игры.";
+                if (error == null && !cancelled) error = activity.getString(R.string.import_save_error);
             }
             final boolean result = ok;
             final String why = error;
@@ -148,9 +148,10 @@ final class GameImporter {
                 progress.dismiss();
                 if (result) {
                     Log.i(TAG, "imported " + iso);
-                    message("Файлы игры готовы", name + " сохранён. Теперь можно запускать игру.", () -> done.accept(true));
+                    message(activity.getString(R.string.import_files_ready),
+                            activity.getString(R.string.import_image_ready, name), () -> done.accept(true));
                 } else if (why != null) {
-                    message("Импорт не выполнен", why, () -> done.accept(false));
+                    message(activity.getString(R.string.launcher_import_failed), why, () -> done.accept(false));
                 } else {
                     done.accept(false);  // cancelled
                 }
@@ -158,12 +159,12 @@ final class GameImporter {
         }, "GameImport").start();
     }
 
-    private static void show(ProgressBar bar, TextView text, long copied, long size) {
+    private void show(ProgressBar bar, TextView text, long copied, long size) {
         if (size > 0) {
             bar.setProgress((int) (copied * 1000 / size));
-            text.setText(String.format(Locale.ROOT, "%.2f из %.2f ГБ", copied / 1e9, size / 1e9));
+            text.setText(String.format(Locale.getDefault(), activity.getString(R.string.import_progress), copied / 1e9, size / 1e9));
         } else {
-            text.setText(String.format(Locale.ROOT, "%.2f ГБ", copied / 1e9));
+            text.setText(String.format(Locale.getDefault(), activity.getString(R.string.import_progress_unknown), copied / 1e9));
         }
     }
 
@@ -181,6 +182,12 @@ final class GameImporter {
             Log.i(TAG, "image not checked, no seeking: " + e);
             return null;
         }
+    }
+
+    private static boolean isDiscImageName(String name) {
+        if (name == null) return false;
+        String lower = name.toLowerCase(Locale.ROOT);
+        return lower.endsWith(".iso") || lower.endsWith(".xiso");
     }
 
     private String displayName(Uri uri) {
@@ -206,7 +213,7 @@ final class GameImporter {
         new AlertDialog.Builder(activity)
                 .setTitle(title)
                 .setMessage(text)
-                .setPositiveButton("ОК", null)
+                .setPositiveButton(R.string.dialog_ok, null)
                 .setOnDismissListener(d -> {
                     if (after != null) after.run();
                 })

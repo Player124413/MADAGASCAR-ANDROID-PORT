@@ -516,7 +516,7 @@ constexpr int kBit = 8;  // kBit + n: buttons bit n (dpad up down left right, st
 enum class Icon : uint8_t { Bullet, Scope, Mode, Reload, Crouch, Knife, Hand, Grenade, Swap, Health, Map, Pause, Gear, Back, Gyro, Move, Suppressor, Up, Down, Left, Right, Zoom, Enter };
 // Play while the player has the controls, Game outside the menus (cutscenes too), Menus in the menus and options,
 // Always in both
-enum class When : uint8_t { Play, Menus, Game, Always };
+enum class When : uint8_t { Play, Menus, Game, Always, Hidden };
 struct Button {
     const char* id;     // its key in layout.toml
     const char* label;  // in the layout editor
@@ -542,7 +542,9 @@ constexpr Button kButtons[] = {
     {"health", "Health pack", Icon::Health, kBit + 1, When::Play},
     {"map", "Objectives", Icon::Map, kBit + 5, When::Play},
     {"pause", "Pause", Icon::Pause, kBit + 4, When::Game},
-    {"gyro", "Gyroscope", Icon::Gyro, kGyro, When::Play},
+    // Kept in the saved-layout index for migration, but not drawn: Android touch controls deliberately expose
+    // original Xbox inputs only, without a phone-gyro virtual button.
+    {"gyro", "Gyroscope", Icon::Gyro, kGyro, When::Hidden},
     {"back", "Back", Icon::Back, kAnalogB, When::Menus, false, true},
     {"suppressor", "Suppressor", Icon::Suppressor, kAnalogY, When::Play},
     // a dpad in the menus and the options, where a tap on a row is hard to aim
@@ -550,8 +552,9 @@ constexpr Button kButtons[] = {
     {"dpad_down", "Down", Icon::Down, kBit + 1, When::Menus},
     {"dpad_left", "Left", Icon::Left, kBit + 2, When::Menus},
     {"dpad_right", "Right", Icon::Right, kBit + 3, When::Menus},
-    // the settings panel over the game, where its cheats give any weapon; a tap again closes it
-    {"panel", "Panel", Icon::Gear, kPanel, When::Always},
+    // Kept only to preserve old layout indices. Settings are reached through the original Xbox Start/pause flow,
+    // not a non-Xbox gear button over gameplay.
+    {"panel", "Panel", Icon::Gear, kPanel, When::Hidden},
     // confirm in the menus, as a pad's A, where a tap on the row is hard to aim
     {"enter", "Enter", Icon::Enter, kAnalogA, When::Menus},
     // the firing mode's button again, beside use while a scope is up: the scope's level, X2 or X5, and a tap switches
@@ -651,15 +654,11 @@ std::atomic<uint64_t> g_touch_ms{0};
 std::atomic<uint64_t> g_back_until{0};  // the back key's tap of Start or B lasts until then
 constexpr uint64_t kBackTapMs = 120;
 
-// the buttons' look: drawn as before, or the images of the skin bagasromadon made (issue #14), with the Xbox
-// controller's letters or without
-enum Skin : uint32_t { kClassic, kXbox, kClean, kSkins };
-constexpr const char* kSkinIds[] = {"classic", "xbox", "clean"};
-constexpr const char* kSkinNames[] = {"CLASSIC", "XBOX", "CLEAN"};
+// The Android port deliberately uses the original Xbox artwork. The atlas also contains an alternate clean set,
+// but it is not selectable: controller glyphs stay recognisable across every saved layout.
 
 // the layout in use, under g_lock
 Layout g_layout = kTwoFinger;
-uint32_t g_skin = kXbox;
 size_t g_preset = 0;
 float g_opacity = 0.85f;
 float g_scale = 1.0f;  // every control's size, on top of its own
@@ -695,9 +694,8 @@ void LoadLayout() {
         g_layout = *kPresets[g_preset].places;
         g_opacity = std::clamp(float(t["opacity"].value_or(double(g_opacity))), 0.2f, 1.0f);
         g_scale = std::clamp(float(t["scale"].value_or(double(g_scale))), 0.5f, 1.5f);
-        std::string skin = t["skin"].value_or(std::string(kSkinIds[g_skin]));
-        for (uint32_t i = 0; i < kSkins; i++)
-            if (skin == kSkinIds[i]) g_skin = i;
+        // This port intentionally uses only the original Xbox button artwork. An old custom/classic/clean skin
+        // value is intentionally ignored so an update cannot silently bring a non-Xbox skin back.
         g_fixed_stick = t["stick"].value_or(std::string("floating")) == "fixed";
         for (size_t i = 0; i <= kButtonCount; i++) {
             // the menus' controls are not in the editor: always the preset's
@@ -722,8 +720,9 @@ void SaveLayout() {
         controls.insert(i == kStick ? "stick" : kButtons[i].id,
                         toml::table{{"x", double(p.x)}, {"y", double(p.y)}, {"r", double(p.r)}, {"hidden", p.hidden}});
     }
+    // The button skin is fixed to the original Xbox artwork, so it is not a player-selectable layout value.
     toml::table t{{"preset", kPresets[g_preset].id}, {"opacity", double(g_opacity)}, {"scale", double(g_scale)},
-                  {"skin", kSkinIds[g_skin]}, {"stick", g_fixed_stick ? "fixed" : "floating"}, {"controls", controls}};
+                  {"stick", g_fixed_stick ? "fixed" : "floating"}, {"controls", controls}};
     std::ofstream(LayoutFile()) << t << "\n";
 }
 
@@ -743,6 +742,7 @@ bool InMenus() { return input::g_menu; }
 
 bool ButtonShown(size_t i) {
     const Button& b = kButtons[i];
+    if (b.when == When::Hidden) return false;
     if (g_editing) return b.when != When::Menus;
     if (g_layout[i].hidden) return false;
     if (i == kZoomButton && !(game::g_zoom < kScoped)) return false;
@@ -1400,12 +1400,12 @@ SkinPart PartOf(Icon icon) {
     }
 }
 
-// the skin's images in use: not CLASSIC, and the atlas loaded
-bool Skinned() { return g_skin != kClassic && g_skin_texture; }
+// the original Xbox images are always in use when the atlas loaded
+bool Skinned() { return g_skin_texture; }
 
-// a part of the skin in use, its circle of radius r about c
+// a part of the original Xbox skin, its circle of radius r about c
 void SkinImage(ImDrawList* dl, SkinPart part, ImVec2 c, float r, ImU32 tint) {
-    int i = int(g_skin == kClean ? kSkinParts : 0) + part;
+    int i = part;
     float u = float(i % kSkinColumns) * kSkinCellW, v = float(i / kSkinColumns) * kSkinCellH;
     float top = c.y + r - 2 * r * kSkinCellH / kSkinCellW;
     dl->AddImage(g_skin_texture, ImVec2(c.x - r, top), ImVec2(c.x + r, c.y + r), ImVec2(u / g_skin_w, v / g_skin_h),
@@ -1594,19 +1594,6 @@ void StepSize(int step) {
     std::lock_guard lock(g_lock);
     EnsureLayout();
     g_scale = float(std::clamp(int(Percent(g_scale)) + step * 5, 50, 150)) / 100.0f;
-    SaveLayout();
-}
-
-const char* SkinName() {
-    std::lock_guard lock(g_lock);
-    EnsureLayout();
-    return kSkinNames[g_skin];
-}
-
-void StepSkin(int step) {
-    std::lock_guard lock(g_lock);
-    EnsureLayout();
-    g_skin = (g_skin + (step > 0 ? 1 : kSkins - 1)) % kSkins;
     SaveLayout();
 }
 

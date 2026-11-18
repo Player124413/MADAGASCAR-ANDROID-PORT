@@ -57,8 +57,6 @@ uint32_t ControlsSize();
 void StepSize(int step);
 void EditLayout();
 #ifdef MADAGASCAR_ANDROID
-const char* SkinName();
-void StepSkin(int step);
 const char* StickModeName();
 void StepStickMode(int step);
 #endif
@@ -275,7 +273,7 @@ enum RowId { kRenderResolution, kMaxFps, kVsync, kFpsCounter, kAniso, kReloadBlu
              kScreenFilter, kGyroInvertX, kGyroInvertY, kUnlockLevels, kUnlockBlackOps, kBrightness, kSkipRevsub, kSkipShadow,
              kGyroVertical, kGyroAxis, kGyroSteadiness, kGyroDriftFix, kOled,
 #ifdef MADAGASCAR_ANDROID
-             kTouchSkin, kTouchStick, kBloom, kFog, kAntiAliasing, kHdr, kDynamicRes, kDynamicTarget, kDynamicMin,
+             kTouchStick, kBloom, kFog, kAntiAliasing, kHdr, kDynamicRes, kDynamicTarget, kDynamicMin,
              kDynamicMax, kDynamicHold
 #endif
 };
@@ -319,21 +317,20 @@ constexpr Row kTouchRows[] = {
     {Kind::Value, kTouchOpacity, "CONTROLS OPACITY"},
     {Kind::Value, kTouchSize, "CONTROLS SIZE"},
 #ifdef MADAGASCAR_ANDROID
-    {Kind::Value, kTouchSkin, "BUTTON STYLE"},
     {Kind::Value, kTouchStick, "ANALOG STICK"},
 #endif
     {Kind::Value, kTouchEdit, "EDIT CONTROLS POSITION"},
+#ifdef __SWITCH__
     {Kind::Heading, -1, "MOTION CONTROLS"},
     {Kind::Value, kGyro, "GYROSCOPE"},
     {Kind::Value, kGyroSensitivity, "GYRO SENSITIVITY"},
-#ifdef __SWITCH__
     {Kind::Value, kGyroVertical, "GYRO VERTICAL SPEED"},
     {Kind::Value, kGyroAxis, "GYRO HORIZONTAL AXIS"},
     {Kind::Value, kGyroSteadiness, "GYRO STEADINESS"},
     {Kind::Value, kGyroDriftFix, "GYRO DRIFT CORRECTION"},
-#endif
     {Kind::Value, kGyroInvertX, "GYRO INVERT X"},
     {Kind::Value, kGyroInvertY, "GYRO INVERT Y"},
+#endif
 };
 
 // on the game's control setup page, under its own rows
@@ -588,10 +585,6 @@ void StepInputRow(int id, int step, char (&text)[64]) {
             std::snprintf(text, sizeof(text), "%u%%", touch::ControlsSize());
             break;
 #ifdef MADAGASCAR_ANDROID
-        case kTouchSkin:
-            if (step) touch::StepSkin(step);
-            std::snprintf(text, sizeof(text), "%s", touch::SkinName());
-            break;
         case kTouchStick:
             if (step) touch::StepStickMode(step);
             std::snprintf(text, sizeof(text), "%s", touch::StickModeName());
@@ -765,6 +758,8 @@ int g_hovered_box = -1;  // the box under the mouse or focused with a key in it,
 bool g_capture_armed = false;
 int g_capture_done = 0;  // frame of the last bind, the key that bound must not start another
 int g_page = kSettingsPage;
+// A phone should show a short category at a time instead of asking the player to scroll a long settings sheet.
+int g_section = 0;
 // the action's key and its alternate as their boxes show them, the alternate blank when there is none
 std::vector<std::string> KeyBoxes(size_t action) {
     std::string keys = input::Binding(action);
@@ -864,14 +859,85 @@ void DrawList(const Row* list, size_t count) {
     }
 }
 
+int HeadingCount(const Row* list, size_t count) {
+    int headings = 0;
+    for (size_t i = 0; i < count; i++) headings += list[i].kind == Kind::Heading;
+    return headings;
+}
+
+const char* HeadingName(const Row* list, size_t count, int section) {
+    int current = -1;
+    for (size_t i = 0; i < count; i++) {
+        if (list[i].kind != Kind::Heading) continue;
+        if (++current == section) return list[i].label;
+    }
+    return "SETTINGS";
+}
+
+// Draw only one heading group. It avoids long touch-scroll lists on phones while preserving the existing rows.
+void DrawSection(const Row* list, size_t count, int wanted) {
+    const int headings = HeadingCount(list, count);
+    int current = headings ? -1 : 0;
+    for (size_t i = 0; i < count; i++) {
+        const Row& r = list[i];
+        if (r.kind == Kind::Heading) ++current;
+        if (current != wanted) continue;
+        if (r.kind == Kind::Heading) Section(r.label);
+        else if (r.kind == Kind::Value) ValueRow(r);
+        else KeyRow(r);
+    }
+}
+
+int SectionCount(int page) {
+    size_t count = 0;
+    const Row* list = rows::Page(page, &count);
+    int sections = std::max(HeadingCount(list, count), 1);
+    // The virtual Xbox sticks belong with touch controls but are a useful, separate short page.
+    return page == kTouchPage ? sections + 1 : sections;
+}
+
+const char* SectionName(int page, int section) {
+    size_t count = 0;
+    const Row* list = rows::Page(page, &count);
+    int headings = std::max(HeadingCount(list, count), 1);
+    if (page == kTouchPage && section == headings) return "CONTROLLER";
+    return HeadingName(list, count, section);
+}
+
+void DrawSectionTabs(int page) {
+    int count = SectionCount(page);
+    if (count < 2) return;
+    g_section = std::clamp(g_section, 0, count - 1);
+    const ImGuiStyle& style = ImGui::GetStyle();
+    float gaps = style.ItemSpacing.x * float(count - 1);
+    float width = (ImGui::GetContentRegionAvail().x - gaps) / float(count);
+    ImGui::PushID("sections");
+    for (int i = 0; i < count; i++) {
+        if (i) ImGui::SameLine();
+        bool selected = i == g_section;
+        if (selected) ImGui::PushStyleColor(ImGuiCol_Button, kHighlight);
+        std::string label = Ui(SectionName(page, i)) + "##section" + std::to_string(i);
+        if (ImGui::Button(label.c_str(), ImVec2(width, 0))) {
+            g_section = i;
+            g_capture = -1;
+        }
+        if (selected) ImGui::PopStyleColor();
+    }
+    ImGui::PopID();
+    ImGui::Separator();
+}
+
 // the touch controls page ends with the sticks', which the game's options show on its control setup page
 void DrawRows(int page) {
     size_t count = 0;
     const Row* list = rows::Page(page, &count);
-    DrawList(list, count);
-    if (page != kTouchPage) return;
-    Section("CONTROLLER");
-    DrawList(kControllerRows, std::size(kControllerRows));
+    int headings = std::max(HeadingCount(list, count), 1);
+    if (page == kTouchPage && g_section == headings) {
+        Section("CONTROLLER");
+        DrawList(kControllerRows, std::size(kControllerRows));
+        return;
+    }
+    DrawSection(list, count, std::min(g_section, headings - 1));
 }
 
 void Defaults() {
@@ -885,7 +951,10 @@ void DrawTabs() {
     // a selection made here shows from the next frame, the tab drawn this one still reads as selected
     bool set = step && CaptureFree();
     int pages = int(std::size(kPages));
-    if (set) g_page = StepIndex(g_page, step, pages);
+    if (set) {
+        g_page = StepIndex(g_page, step, pages);
+        g_section = 0;
+    }
     ImGui::PushStyleColor(ImGuiCol_Tab, kTab);
     ImGui::PushStyleColor(ImGuiCol_TabHovered, kTabHovered);
     ImGui::PushStyleColor(ImGuiCol_TabSelected, kHighlight);
@@ -900,6 +969,7 @@ void DrawTabs() {
             if (ImGui::BeginTabItem(tab.c_str(), nullptr, set && i == g_page ? ImGuiTabItemFlags_SetSelected : 0)) {
                 if (!set && i != g_page) {
                     g_page = i;
+                    g_section = 0;
                     g_capture = -1;
                 }
                 ImGui::EndTabItem();
@@ -939,7 +1009,12 @@ void DrawPanel() {
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     float em = ImGui::GetFontSize();
     ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(em * 50, em * 32), ImGuiCond_Always);
+    // Use most of a landscape phone without covering its safe margins. Short sub-pages plus this larger viewport mean
+    // display/touch settings are tapped directly instead of being hunted through a scrolling list.
+    ImVec2 safe(em * 1.2f, em * 1.2f);
+    ImVec2 size(std::min(std::max(vp->WorkSize.x - safe.x * 2, em * 20.0f), em * 62.0f),
+                std::min(std::max(vp->WorkSize.y - safe.y * 2, em * 16.0f), em * 42.0f));
+    ImGui::SetNextWindowSize(size, ImGuiCond_Always);
     for (const auto& [col, color] : kPanelColors) ImGui::PushStyleColor(col, color);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -950,6 +1025,7 @@ void DrawPanel() {
     if (ImGui::Begin("##settings", nullptr, kFlags)) {
         DrawTitle();
         DrawTabs();
+        DrawSectionTabs(g_page);
         float footer = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetFrameHeightWithSpacing() + em;
         ImGui::BeginChild("##rows", ImVec2(0, -footer), ImGuiChildFlags_NavFlattened);
         g_hovered_box = -1;

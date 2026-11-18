@@ -44,7 +44,7 @@ final class FolderImporter {
     void copy(Uri tree, File destination, Consumer<Boolean> done) {
         File parent = destination.getAbsoluteFile().getParentFile();
         if (parent == null || !parent.isDirectory() && !parent.mkdirs()) {
-            message("Импорт папки", "Не удалось подготовить папку приложения для файлов игры.", () -> done.accept(false));
+            message(activity.getString(R.string.folder_import), activity.getString(R.string.folder_prepare_failed), () -> done.accept(false));
             return;
         }
 
@@ -52,14 +52,14 @@ final class FolderImporter {
         File backup = new File(parent, "game.previous");
         deleteTree(staging);
         if (!staging.mkdirs()) {
-            message("Импорт папки", "Не удалось создать временную папку для импорта.", () -> done.accept(false));
+            message(activity.getString(R.string.folder_import), activity.getString(R.string.folder_staging_failed), () -> done.accept(false));
             return;
         }
 
         ProgressBar bar = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
         bar.setIndeterminate(true);
         TextView text = new TextView(activity);
-        text.setText("Подготовка…");
+        text.setText(R.string.import_preparing);
         LinearLayout box = new LinearLayout(activity);
         box.setOrientation(LinearLayout.VERTICAL);
         int pad = Math.round(20 * activity.getResources().getDisplayMetrics().density);
@@ -69,11 +69,11 @@ final class FolderImporter {
 
         cancelled = false;
         AlertDialog progress = new AlertDialog.Builder(activity)
-                .setTitle("Импорт папки игры")
-                .setMessage("Большая папка может копироваться несколько минут.")
+                .setTitle(R.string.folder_import_title)
+                .setMessage(R.string.folder_import_description)
                 .setView(box)
                 .setCancelable(false)
-                .setNegativeButton("Отмена", (d, which) -> cancelled = true)
+                .setNegativeButton(R.string.dialog_cancel, (d, which) -> cancelled = true)
                 .show();
         if (progress.getWindow() != null) progress.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -85,13 +85,13 @@ final class FolderImporter {
                 copyDirectory(tree, root, staging, text);
                 if (cancelled) throw new ImportCancelled();
                 if (!new File(staging, "default.xbe").isFile()) {
-                    throw new IllegalArgumentException("В выбранной папке не найден default.xbe. Выберите папку, где он лежит непосредственно внутри.");
+                    throw new IllegalArgumentException(activity.getString(R.string.folder_missing_xbe));
                 }
             } catch (ImportCancelled e) {
                 // Cancellation removes the incomplete staging directory and leaves the current game intact.
             } catch (Exception e) {
                 Log.w(TAG, "folder import failed", e);
-                error = e.getMessage() == null ? "Не удалось прочитать выбранную папку." : e.getMessage();
+                error = e.getMessage() == null ? activity.getString(R.string.folder_read_failed) : e.getMessage();
             }
 
             boolean ok = error == null && !cancelled;
@@ -102,7 +102,7 @@ final class FolderImporter {
                 if (!newMoved) {
                     if (oldMoved && backup.exists()) backup.renameTo(destination);
                     ok = false;
-                    error = "Не удалось заменить текущую папку игры. Освободите место и попробуйте ещё раз.";
+                    error = activity.getString(R.string.folder_replace_failed);
                 } else {
                     deleteTree(backup);
                 }
@@ -114,9 +114,9 @@ final class FolderImporter {
             main.post(() -> {
                 progress.dismiss();
                 if (result) {
-                    message("Файлы игры готовы", "Папка Madagascar импортирована. Можно запускать игру.", () -> done.accept(true));
+                    message(activity.getString(R.string.import_files_ready), activity.getString(R.string.folder_ready), () -> done.accept(true));
                 } else if (reason != null) {
-                    message("Импорт не выполнен", reason, () -> done.accept(false));
+                    message(activity.getString(R.string.launcher_import_failed), reason, () -> done.accept(false));
                 } else {
                     done.accept(false);
                 }
@@ -127,12 +127,14 @@ final class FolderImporter {
 
     private void copyDirectory(Uri tree, Uri directory, File output, TextView progress) throws Exception {
         if (cancelled) throw new ImportCancelled();
-        if (!output.isDirectory() && !output.mkdirs()) throw new IllegalArgumentException("Не удалось создать " + output.getName());
+        if (!output.isDirectory() && !output.mkdirs()) {
+            throw new IllegalArgumentException(activity.getString(R.string.folder_create_failed, output.getName()));
+        }
 
         Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(
                 tree, DocumentsContract.getDocumentId(directory));
         try (Cursor cursor = activity.getContentResolver().query(children, COLUMNS, null, null, null)) {
-            if (cursor == null) throw new IllegalArgumentException("Системный файловый провайдер не открыл папку.");
+            if (cursor == null) throw new IllegalArgumentException(activity.getString(R.string.folder_provider_folder_failed));
             int idColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID);
             int nameColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME);
             int typeColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE);
@@ -157,7 +159,7 @@ final class FolderImporter {
         long copied = 0;
         byte[] buffer = new byte[BUFFER_SIZE];
         InputStream opened = activity.getContentResolver().openInputStream(source);
-        if (opened == null) throw new IllegalArgumentException("Системный файловый провайдер не открыл файл.");
+        if (opened == null) throw new IllegalArgumentException(activity.getString(R.string.folder_provider_file_failed));
         try (InputStream in = new BufferedInputStream(opened, BUFFER_SIZE);
              OutputStream out = new BufferedOutputStream(new FileOutputStream(target), BUFFER_SIZE)) {
             for (int count; !cancelled && (count = in.read(buffer)) != -1;) {
@@ -165,7 +167,8 @@ final class FolderImporter {
                 copied += count;
                 if ((copied & ((16L << 20) - 1)) < BUFFER_SIZE) {
                     long bytes = copied;
-                    main.post(() -> progress.setText(String.format(Locale.ROOT, "Скопировано %.1f МБ", bytes / 1048576.0)));
+                    main.post(() -> progress.setText(String.format(Locale.getDefault(),
+                            activity.getString(R.string.folder_copied), bytes / 1048576.0)));
                 }
             }
             out.flush();
@@ -192,7 +195,7 @@ final class FolderImporter {
         new AlertDialog.Builder(activity)
                 .setTitle(title)
                 .setMessage(text)
-                .setPositiveButton("ОК", null)
+                .setPositiveButton(R.string.dialog_ok, null)
                 .setOnDismissListener(d -> { if (after != null) after.run(); })
                 .show();
     }

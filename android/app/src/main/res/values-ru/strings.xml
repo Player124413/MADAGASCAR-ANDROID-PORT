@@ -1,0 +1,73 @@
+<resources>
+    <string name="app_name">Madagascar Android</string>
+
+    <!-- Лаунчер -->
+    <string name="launcher_eyebrow">СТАТИЧЕСКАЯ РЕКОМПИЛЯЦИЯ  •  ANDROID</string>
+    <string name="launcher_subtitle">Приключение начинается здесь</string>
+    <string name="launcher_build_tag">VULKAN 1.1  •  ARM64  •  СЕНСОРНОЕ УПРАВЛЕНИЕ</string>
+    <string name="launcher_status_checking">ПРОВЕРКА ФАЙЛОВ ИГРЫ</string>
+    <string name="launcher_status_searching">Ищем default.xbe или образ диска…</string>
+    <string name="launcher_launch">ЗАПУСТИТЬ ИГРУ</string>
+    <string name="launcher_add_copy">ДОБАВИТЬ СВОЮ КОПИЮ</string>
+    <string name="launcher_import_iso">Импортировать Xbox ISO / XISO</string>
+    <string name="launcher_import_folder">Импортировать папку с default.xbe</string>
+    <string name="launcher_performance">УПРАВЛЕНИЕ И ПРОИЗВОДИТЕЛЬНОСТЬ</string>
+    <string name="launcher_tip_settings">Нажмите оригинальную кнопку Xbox Start в игре, чтобы открыть паузу и настройки.</string>
+    <string name="launcher_tip_touch">Сенсорное управление использует оригинальную раскладку кнопок Xbox. Размер, прозрачность и расположение меняются в «Сенсорном управлении».</string>
+    <string name="launcher_tip_mali">Для Mali предусмотрены запасные пути Vulkan 1.1, CPU-декодирование DXT и динамическое разрешение.</string>
+    <string name="launcher_legal">Игра не входит в приложение. Используйте файлы со своей законно полученной копии Madagascar для Xbox.</string>
+    <string name="launcher_version">MADAGASCAR ANDROID  •  ЭКСПЕРИМЕНТАЛЬНАЯ СБОРКА</string>
+    <string name="launcher_credits">О ПОРТЕ</string>
+    <string name="launcher_picker_unavailable">Не удалось открыть выбор папки.</string>
+    <string name="launcher_folder_read_failed">Не удалось прочитать выбранную папку: %1$s</string>
+    <string name="launcher_missing_title">Файлы игры не найдены</string>
+    <string name="launcher_missing_message">Сначала добавьте ISO/XISO или папку с default.xbe.</string>
+    <string name="launcher_status_ready">ФАЙЛЫ ГОТОВЫ</string>
+    <string name="launcher_status_needed">НУЖНЫ ФАЙЛЫ ИГРЫ</string>
+    <string name="launcher_status_found">Игра найдена. Порт запускается нативно на ARM64 через Vulkan.</string>
+    <string name="launcher_status_importing">Идёт импорт. Не закрывайте приложение.</string>
+    <string name="launcher_status_missing">Добавьте ISO/XISO или папку с default.xbe.</string>
+    <string name="launcher_path">Папка: %1$s</string>
+    <string name="launcher_import_failed">Импорт не выполнен</string>
+    <string name="launcher_startup_no_message">без сообщения</string>
+    <string name="launcher_startup_failed">Не удалось открыть лаунчер Madagascar.\n\n%1$s: %2$s\n\nОтчёт сохранён в Android/data/com.player124413.madagascar/files/logs/java-startup-crash.txt.\n\nПришлите его содержимое вместе с моделью телефона и версией Android.</string>
+
+    <!-- Окно благодарностей. HTML-ссылки намеренны. -->
+    <string name="credits_title">Madagascar Android</string>
+    <string name="credits_message"><![CDATA[<b>Порт сделан Player1444</b><br>Telegram-канал: <a href="https://t.me/player1444ports">t.me/player1444ports</a><br><br>Огромное спасибо репозиторию <a href="https://github.com/gerisson1996/MADAGASCAR-NX-PORT">gerisson1996/MADAGASCAR-NX-PORT</a>.<br>Без него Android-порт не существовал бы.<br><br>Сама игра в приложение не входит.]]></string>
+
+    <!-- Общие диалоги и импорт ISO -->
+    <string name="dialog_ok">ОК</string>
+    <string name="dialog_cancel">Отмена</string>
+    <string name="import_game">Импорт игры</string>
+    <string name="import_no_file_manager">На устройстве нет файлового менеджера для выбора образа диска.</string>
+    <string name="import_choose_image">Выберите образ диска игры — файл .iso или .xiso.</string>
+    <string name="import_create_folder_failed">Не удалось создать папку для файлов игры.</string>
+    <string name="import_not_enough_space">Недостаточно места</string>
+    <string name="import_space_needed">Для образа нужно %.1f ГБ свободного места, доступно %.1f ГБ.</string>
+    <string name="import_preparing">Подготовка…</string>
+    <string name="import_image_title">Импорт: %1$s</string>
+    <string name="import_not_xbox_image">%1$s не является образом диска Xbox.</string>
+    <string name="import_copy_ended_early">Копирование завершилось раньше, чем был прочитан весь файл.</string>
+    <string name="import_copy_error">Ошибка копирования: %1$s</string>
+    <string name="import_save_error">Не удалось сохранить образ в папке игры.</string>
+    <string name="import_files_ready">ФАЙЛЫ ИГРЫ ГОТОВЫ</string>
+    <string name="import_image_ready">%1$s сохранён. Теперь можно запускать игру.</string>
+    <string name="import_progress">%.2f из %.2f ГБ</string>
+    <string name="import_progress_unknown">%.2f ГБ</string>
+
+    <!-- Импорт распакованной папки -->
+    <string name="folder_import">Импорт папки</string>
+    <string name="folder_prepare_failed">Не удалось подготовить папку приложения для файлов игры.</string>
+    <string name="folder_staging_failed">Не удалось создать временную папку для импорта.</string>
+    <string name="folder_import_title">Импорт папки игры</string>
+    <string name="folder_import_description">Копирование большой папки может занять несколько минут.</string>
+    <string name="folder_missing_xbe">В выбранной папке не найден default.xbe. Выберите папку, где он лежит непосредственно внутри.</string>
+    <string name="folder_read_failed">Не удалось прочитать выбранную папку.</string>
+    <string name="folder_replace_failed">Не удалось заменить текущую папку игры. Освободите место и попробуйте ещё раз.</string>
+    <string name="folder_ready">Папка Madagascar импортирована. Можно запускать игру.</string>
+    <string name="folder_create_failed">Не удалось создать %1$s.</string>
+    <string name="folder_provider_folder_failed">Системный файловый провайдер не открыл папку.</string>
+    <string name="folder_provider_file_failed">Системный файловый провайдер не открыл файл.</string>
+    <string name="folder_copied">Скопировано %.1f МБ</string>
+</resources>

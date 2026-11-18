@@ -1,3 +1,73 @@
 <resources>
     <string name="app_name">Madagascar Android</string>
+
+    <!-- Launcher -->
+    <string name="launcher_eyebrow">STATIC RECOMPILATION  •  ANDROID</string>
+    <string name="launcher_subtitle">The adventure starts here</string>
+    <string name="launcher_build_tag">VULKAN 1.1  •  ARM64  •  TOUCH</string>
+    <string name="launcher_status_checking">CHECKING GAME FILES</string>
+    <string name="launcher_status_searching">Looking for default.xbe or a disc image…</string>
+    <string name="launcher_launch">LAUNCH GAME</string>
+    <string name="launcher_add_copy">ADD YOUR OWN COPY</string>
+    <string name="launcher_import_iso">Import Xbox ISO / XISO</string>
+    <string name="launcher_import_folder">Import folder with default.xbe</string>
+    <string name="launcher_performance">CONTROLS AND PERFORMANCE</string>
+    <string name="launcher_tip_settings">Use the game’s original Xbox Start button to open its pause/options menu.</string>
+    <string name="launcher_tip_touch">Touch controls use the original Xbox button layout. Their size, opacity and position can be adjusted in Touch Controls.</string>
+    <string name="launcher_tip_mali">Mali devices use Vulkan 1.1 fallback paths, CPU DXT decoding and dynamic resolution where needed.</string>
+    <string name="launcher_legal">The game is not included. Use files from your own legally obtained Xbox copy of Madagascar.</string>
+    <string name="launcher_version">MADAGASCAR ANDROID  •  EXPERIMENTAL BUILD</string>
+    <string name="launcher_credits">ABOUT THE PORT</string>
+    <string name="launcher_picker_unavailable">Could not open the folder picker.</string>
+    <string name="launcher_folder_read_failed">Could not read the selected folder: %1$s</string>
+    <string name="launcher_missing_title">Game files not found</string>
+    <string name="launcher_missing_message">Import an ISO/XISO or a folder containing default.xbe first.</string>
+    <string name="launcher_status_ready">FILES READY</string>
+    <string name="launcher_status_needed">GAME FILES NEEDED</string>
+    <string name="launcher_status_found">Game files found. The port launches natively on ARM64 through Vulkan.</string>
+    <string name="launcher_status_importing">Importing files. Do not close the app.</string>
+    <string name="launcher_status_missing">Import an ISO/XISO or a folder containing default.xbe.</string>
+    <string name="launcher_path">Folder: %1$s</string>
+    <string name="launcher_import_failed">Import failed</string>
+    <string name="launcher_startup_no_message">no message</string>
+    <string name="launcher_startup_failed">Could not open the Madagascar launcher.\n\n%1$s: %2$s\n\nA report was saved to Android/data/com.player124413.madagascar/files/logs/java-startup-crash.txt.\n\nSend its contents with the device model and Android version.</string>
+
+    <!-- One-time, reopenable attribution dialog. HTML links are intentional. -->
+    <string name="credits_title">Madagascar Android</string>
+    <string name="credits_message"><![CDATA[<b>Made by Player1444</b><br>Telegram channel: <a href="https://t.me/player1444ports">t.me/player1444ports</a><br><br>Special thanks to <a href="https://github.com/gerisson1996/MADAGASCAR-NX-PORT">gerisson1996/MADAGASCAR-NX-PORT</a>.<br>Without that repository, this Android port would not exist.<br><br>The game itself is not included.]]></string>
+
+    <!-- Shared dialogs and ISO import -->
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="import_game">Import game</string>
+    <string name="import_no_file_manager">No file manager is available to select a disc image.</string>
+    <string name="import_choose_image">Select the game disc image — a .iso or .xiso file.</string>
+    <string name="import_create_folder_failed">Could not create the game-files folder.</string>
+    <string name="import_not_enough_space">Not enough storage</string>
+    <string name="import_space_needed">The image needs %.1f GB of free space; %.1f GB is available.</string>
+    <string name="import_preparing">Preparing…</string>
+    <string name="import_image_title">Import: %1$s</string>
+    <string name="import_not_xbox_image">%1$s is not an Xbox disc image.</string>
+    <string name="import_copy_ended_early">The copy ended before the whole file was read.</string>
+    <string name="import_copy_error">Copy error: %1$s</string>
+    <string name="import_save_error">Could not save the image in the game folder.</string>
+    <string name="import_files_ready">GAME FILES READY</string>
+    <string name="import_image_ready">%1$s was saved. You can now launch the game.</string>
+    <string name="import_progress">%.2f of %.2f GB</string>
+    <string name="import_progress_unknown">%.2f GB</string>
+
+    <!-- Extracted-folder import -->
+    <string name="folder_import">Import folder</string>
+    <string name="folder_prepare_failed">Could not prepare the app folder for game files.</string>
+    <string name="folder_staging_failed">Could not create a temporary import folder.</string>
+    <string name="folder_import_title">Import game folder</string>
+    <string name="folder_import_description">A large folder may take several minutes to copy.</string>
+    <string name="folder_missing_xbe">default.xbe was not found directly inside the selected folder. Select the folder that contains it.</string>
+    <string name="folder_read_failed">Could not read the selected folder.</string>
+    <string name="folder_replace_failed">Could not replace the current game folder. Free space and try again.</string>
+    <string name="folder_ready">The Madagascar folder was imported. You can now launch the game.</string>
+    <string name="folder_create_failed">Could not create %1$s.</string>
+    <string name="folder_provider_folder_failed">The system file provider could not open the folder.</string>
+    <string name="folder_provider_file_failed">The system file provider could not open a file.</string>
+    <string name="folder_copied">Copied %.1f MB</string>
 </resources>

@@ -3,11 +3,15 @@ package com.player124413.madagascar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Html;
+import android.text.Spanned;
+import android.text.method.LinkMovementMethod;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
@@ -56,9 +60,11 @@ public final class LauncherActivity extends Activity {
             discImporter = new GameImporter(this);
             folderImporter = new FolderImporter(this);
 
-            setContentView(buildLauncher());
+            View launcher = buildLauncher();
+            setContentView(launcher);
             launcherReady = true;
             refreshGameState();
+            launcher.post(() -> showCreditsIfNeeded(false));
         } catch (Throwable error) {
             // Keep the launch activity alive long enough to show a report location instead of immediately returning
             // to the home screen on an OEM-specific framework/resource failure.
@@ -81,11 +87,8 @@ public final class LauncherActivity extends Activity {
         view.setTextColor(Color.WHITE);
         view.setTextSize(16);
         view.setGravity(Gravity.CENTER_VERTICAL);
-        view.setText("Не удалось открыть лаунчер Madagascar.\n\n"
-                + error.getClass().getSimpleName() + ": "
-                + (error.getMessage() == null ? "без сообщения" : error.getMessage())
-                + "\n\nОтчёт сохранён в Android/data/com.player124413.madagascar/files/logs/java-startup-crash.txt."
-                + "\n\nПришлите его содержимое вместе с моделью телефона и версией Android.");
+        view.setText(getString(R.string.launcher_startup_failed, error.getClass().getSimpleName(),
+                error.getMessage() == null ? getString(R.string.launcher_startup_no_message) : error.getMessage()));
         view.setBackgroundColor(Color.rgb(16, 19, 15));
         setContentView(view);
     }
@@ -108,7 +111,7 @@ public final class LauncherActivity extends Activity {
         scroll.addView(page, new ScrollView.LayoutParams(ScrollView.LayoutParams.MATCH_PARENT,
                 ScrollView.LayoutParams.WRAP_CONTENT));
 
-        TextView eyebrow = text("STATIC RECOMPILATION  •  ANDROID", 11, 0xFFE7B64C, true);
+        TextView eyebrow = text(getString(R.string.launcher_eyebrow), 11, 0xFFE7B64C, true);
         eyebrow.setLetterSpacing(0.12f);
         page.addView(eyebrow, matchWrap());
 
@@ -134,10 +137,10 @@ public final class LauncherActivity extends Activity {
         TextView title = text("MADAGASCAR", 27, Color.WHITE, true);
         title.setLetterSpacing(0.025f);
         titleStack.addView(title, matchWrap());
-        TextView subtitle = text("Приключение начинается здесь", 14, 0xFFD5D2C5, false);
+        TextView subtitle = text(getString(R.string.launcher_subtitle), 14, 0xFFD5D2C5, false);
         subtitle.setPadding(0, dp(5), 0, 0);
         titleStack.addView(subtitle, matchWrap());
-        TextView buildTag = text("VULKAN 1.1  •  ARM64  •  TOUCH", 10, 0xFFE7B64C, true);
+        TextView buildTag = text(getString(R.string.launcher_build_tag), 10, 0xFFE7B64C, true);
         buildTag.setLetterSpacing(0.08f);
         buildTag.setPadding(0, dp(12), 0, 0);
         titleStack.addView(buildTag, matchWrap());
@@ -145,10 +148,10 @@ public final class LauncherActivity extends Activity {
         LinearLayout statusCard = card();
         statusCard.setOrientation(LinearLayout.VERTICAL);
         statusCard.setPadding(dp(17), dp(16), dp(17), dp(16));
-        statusTitle = text("ПРОВЕРКА ФАЙЛОВ ИГРЫ", 13, 0xFFE7B64C, true);
+        statusTitle = text(getString(R.string.launcher_status_checking), 13, 0xFFE7B64C, true);
         statusTitle.setLetterSpacing(0.06f);
         statusCard.addView(statusTitle, matchWrap());
-        statusDetail = text("Ищем default.xbe или образ диска…", 14, 0xFFE0E0D8, false);
+        statusDetail = text(getString(R.string.launcher_status_searching), 14, 0xFFE0E0D8, false);
         statusDetail.setPadding(0, dp(8), 0, 0);
         statusCard.addView(statusDetail, matchWrap());
         pathLabel = text("", 11, 0xFFAAA99D, false);
@@ -157,30 +160,30 @@ public final class LauncherActivity extends Activity {
 
         page.addView(statusCard, cardParams());
 
-        launchButton = button("ЗАПУСТИТЬ ИГРУ", 0xFF527B3C, 0xFFFFFFFF);
+        launchButton = button(getString(R.string.launcher_launch), 0xFF527B3C, 0xFFFFFFFF);
         launchButton.setOnClickListener(v -> launchGame());
         LinearLayout.LayoutParams launchParams = matchWrap();
         launchParams.topMargin = dp(18);
         page.addView(launchButton, launchParams);
 
-        TextView addTitle = text("ДОБАВИТЬ СВОЮ КОПИЮ", 12, 0xFFE7B64C, true);
+        TextView addTitle = text(getString(R.string.launcher_add_copy), 12, 0xFFE7B64C, true);
         addTitle.setLetterSpacing(0.1f);
         LinearLayout.LayoutParams addTitleParams = matchWrap();
         addTitleParams.topMargin = dp(25);
         addTitleParams.bottomMargin = dp(10);
         page.addView(addTitle, addTitleParams);
 
-        isoButton = button("Импортировать Xbox ISO", 0xFF272C23, 0xFFF4F0E7);
+        isoButton = button(getString(R.string.launcher_import_iso), 0xFF272C23, 0xFFF4F0E7);
         isoButton.setOnClickListener(v -> discImporter.pick());
         page.addView(isoButton, matchWrap());
 
-        folderButton = button("Импортировать папку с default.xbe", 0xFF272C23, 0xFFF4F0E7);
+        folderButton = button(getString(R.string.launcher_import_folder), 0xFF272C23, 0xFFF4F0E7);
         folderButton.setOnClickListener(v -> pickImportFolder());
         LinearLayout.LayoutParams folderParams = matchWrap();
         folderParams.topMargin = dp(9);
         page.addView(folderButton, folderParams);
 
-        TextView qualityTitle = text("УПРАВЛЕНИЕ И ПРОИЗВОДИТЕЛЬНОСТЬ", 12, 0xFFE7B64C, true);
+        TextView qualityTitle = text(getString(R.string.launcher_performance), 12, 0xFFE7B64C, true);
         qualityTitle.setLetterSpacing(0.08f);
         LinearLayout.LayoutParams qualityTitleParams = matchWrap();
         qualityTitleParams.topMargin = dp(26);
@@ -190,22 +193,47 @@ public final class LauncherActivity extends Activity {
         LinearLayout tips = card();
         tips.setOrientation(LinearLayout.VERTICAL);
         tips.setPadding(dp(16), dp(14), dp(16), dp(14));
-        addBullet(tips, "Плавающая кнопка-шестерёнка открывает меню настроек во время игры.");
-        addBullet(tips, "В «Сенсорном управлении» доступны пресеты, масштаб, прозрачность и редактор расположения. Кнопки можно перетаскивать, скрывать и менять их размер.");
-        addBullet(tips, "Для Mali предусмотрены запасные Vulkan 1.1 пути, CPU-декодирование DXT и динамическое разрешение.");
+        addBullet(tips, getString(R.string.launcher_tip_settings));
+        addBullet(tips, getString(R.string.launcher_tip_touch));
+        addBullet(tips, getString(R.string.launcher_tip_mali));
         page.addView(tips, cardParams());
 
-        TextView legal = text("Игра не входит в приложение. Используйте файлы со своей законно полученной копии Madagascar для Xbox.",
-                12, 0xFFAAA99D, false);
+        Button credits = button(getString(R.string.launcher_credits), 0xFF272C23, 0xFFF4F0E7);
+        credits.setOnClickListener(v -> showCreditsIfNeeded(true));
+        LinearLayout.LayoutParams creditsParams = matchWrap();
+        creditsParams.topMargin = dp(16);
+        page.addView(credits, creditsParams);
+
+        TextView legal = text(getString(R.string.launcher_legal), 12, 0xFFAAA99D, false);
         legal.setGravity(Gravity.CENTER);
         legal.setPadding(dp(8), dp(20), dp(8), dp(6));
         page.addView(legal, matchWrap());
 
-        TextView version = text("MADAGASCAR ANDROID  •  EXPERIMENTAL BUILD", 10, 0xFF777A6E, true);
+        TextView version = text(getString(R.string.launcher_version), 10, 0xFF777A6E, true);
         version.setGravity(Gravity.CENTER);
         version.setLetterSpacing(0.08f);
         page.addView(version, matchWrap());
         return root;
+    }
+
+    private void showCreditsIfNeeded(boolean force) {
+        SharedPreferences preferences = getSharedPreferences("launcher", MODE_PRIVATE);
+        if (!force && preferences.getBoolean("credits_shown", false)) return;
+        TextView message = new TextView(this);
+        int padding = dp(20);
+        message.setPadding(padding, 0, padding, 0);
+        message.setTextColor(0xFFF4F0E7);
+        message.setTextSize(15);
+        Spanned text = Html.fromHtml(getString(R.string.credits_message), Html.FROM_HTML_MODE_LEGACY);
+        message.setText(text);
+        message.setMovementMethod(LinkMovementMethod.getInstance());
+        message.setLinksClickable(true);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.credits_title)
+                .setView(message)
+                .setPositiveButton(R.string.dialog_ok, null)
+                .show();
+        preferences.edit().putBoolean("credits_shown", true).apply();
     }
 
     private void addBullet(LinearLayout parent, String value) {
@@ -221,7 +249,7 @@ public final class LauncherActivity extends Activity {
         try {
             startActivityForResult(i, REQUEST_IMPORT_FOLDER);
         } catch (Exception e) {
-            Toast.makeText(this, "Не удалось открыть выбор папки", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.launcher_picker_unavailable, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -252,7 +280,7 @@ public final class LauncherActivity extends Activity {
             } catch (Exception e) {
                 importing = false;
                 setImportButtonsEnabled(true);
-                showImportError("Не удалось прочитать выбранную папку: " + e.getMessage());
+                showImportError(getString(R.string.launcher_folder_read_failed, e.getMessage()));
             }
         }
     }
@@ -260,9 +288,9 @@ public final class LauncherActivity extends Activity {
     private void launchGame() {
         if (!hasGame(gameDirectory)) {
             refreshGameState();
-            new AlertDialog.Builder(this).setTitle("Файлы игры не найдены")
-                    .setMessage("Добавьте ISO либо выберите/импортируйте папку с default.xbe.")
-                    .setPositiveButton("ОК", null).show();
+            new AlertDialog.Builder(this).setTitle(R.string.launcher_missing_title)
+                    .setMessage(R.string.launcher_missing_message)
+                    .setPositiveButton(R.string.dialog_ok, null).show();
             return;
         }
         startActivity(new Intent(this, GameActivity.class));
@@ -272,12 +300,11 @@ public final class LauncherActivity extends Activity {
         if (!launcherReady || statusTitle == null || statusDetail == null || pathLabel == null
                 || launchButton == null || gameDirectory == null) return;
         boolean found = hasGame(gameDirectory);
-        statusTitle.setText(found ? "ФАЙЛЫ ГОТОВЫ" : "НУЖНЫ ФАЙЛЫ ИГРЫ");
+        statusTitle.setText(found ? R.string.launcher_status_ready : R.string.launcher_status_needed);
         statusTitle.setTextColor(found ? 0xFF8FC76A : 0xFFE7B64C);
-        statusDetail.setText(found
-                ? "Игра найдена. Порт запускается нативно на ARM64 через Vulkan."
-                : (importing ? "Идёт импорт. Не закрывайте приложение." : "Добавьте ISO или папку с default.xbe."));
-        pathLabel.setText("Папка: " + gameDirectory.getAbsolutePath());
+        statusDetail.setText(found ? R.string.launcher_status_found
+                : (importing ? R.string.launcher_status_importing : R.string.launcher_status_missing));
+        pathLabel.setText(getString(R.string.launcher_path, gameDirectory.getAbsolutePath()));
         launchButton.setEnabled(found && !importing);
         launchButton.setAlpha(launchButton.isEnabled() ? 1.0f : 0.48f);
     }
@@ -291,8 +318,8 @@ public final class LauncherActivity extends Activity {
     }
 
     private void showImportError(String message) {
-        new AlertDialog.Builder(this).setTitle("Импорт не выполнен")
-                .setMessage(message).setPositiveButton("ОК", null).show();
+        new AlertDialog.Builder(this).setTitle(R.string.launcher_import_failed)
+                .setMessage(message).setPositiveButton(R.string.dialog_ok, null).show();
     }
 
     private static boolean hasGame(File dir) {
