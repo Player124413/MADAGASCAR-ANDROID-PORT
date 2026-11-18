@@ -79,37 +79,6 @@ if(MADAGASCAR_ANDROID_STUB)
     add_library(main SHARED "${NATIVE}/stub_main.cpp")
     target_link_libraries(main PRIVATE SDL3::SDL3 android log)
 
-    # CI has no private XBE/generated source to link, but it must still compile the user-requested GLES path. Keep this
-    # an object-only target: it validates the Android NDK/EGL/GLES and shader headers without shipping game code.
-    include(FetchContent)
-    set(ENABLE_OPT OFF CACHE BOOL "" FORCE)
-    set(ENABLE_HLSL ON CACHE BOOL "" FORCE)
-    set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "" FORCE)
-    set(ENABLE_SPVREMAPPER OFF CACHE BOOL "" FORCE)
-    set(GLSLANG_TESTS OFF CACHE BOOL "" FORCE)
-    set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
-    set(BUILD_EXTERNAL OFF CACHE BOOL "" FORCE)
-    set(SPIRV_CROSS_CLI OFF CACHE BOOL "" FORCE)
-    set(SPIRV_CROSS_SHARED OFF CACHE BOOL "" FORCE)
-    set(SPIRV_CROSS_STATIC ON CACHE BOOL "" FORCE)
-    set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(gles_probe_glslang GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git GIT_TAG 16.0.0 GIT_SHALLOW TRUE)
-    FetchContent_Declare(gles_probe_spirv_cross GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
-                         GIT_TAG vulkan-sdk-1.3.290.0 GIT_SHALLOW TRUE)
-    FetchContent_Declare(gles_probe_imgui GIT_REPOSITORY https://github.com/ocornut/imgui.git GIT_TAG v1.91.0 GIT_SHALLOW TRUE)
-    FetchContent_MakeAvailable(gles_probe_glslang gles_probe_spirv_cross gles_probe_imgui)
-    add_library(gles_compile_probe OBJECT
-        "${NATIVE}/gles.cpp" "${NATIVE}/gles_host_common.cpp" "${NATIVE}/gles_platform.cpp"
-        "${NATIVE}/gles_shader.cpp" "${NATIVE}/gles_spirv.cpp")
-    target_include_directories(gles_compile_probe PRIVATE
-        "${NATIVE}/compat" "${SDK}/harness/compat" "${NATIVE}" "${GAME}/src" "${SDK}/runtime"
-        "${gles_probe_glslang_SOURCE_DIR}")
-    target_include_directories(gles_compile_probe SYSTEM PRIVATE "${gles_probe_spirv_cross_SOURCE_DIR}" "${gles_probe_imgui_SOURCE_DIR}")
-    target_compile_definitions(gles_compile_probe PRIVATE MADAGASCAR_ANDROID)
-    target_compile_options(gles_compile_probe PRIVATE -fno-strict-aliasing -fsigned-char)
-    target_link_libraries(gles_compile_probe PRIVATE SDL3::SDL3 glslang glslang-default-resource-limits spirv-cross-glsl EGL GLESv3 android log)
-    add_dependencies(main gles_compile_probe)
-
     # Match the release library so the APK job also checks 16 KiB device compatibility.
     target_link_options(main PRIVATE -Wl,-z,max-page-size=16384)
     return()
