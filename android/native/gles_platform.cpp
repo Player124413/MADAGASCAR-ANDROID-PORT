@@ -35,7 +35,8 @@ ANativeWindow* CurrentAndroidWindow() {
         if (ANativeWindow* window = provider()) g_window = window;
         return g_window;
     }
-    SDL_Window* window = host::Window();
+    // This file also defines gpu::host helpers for GLES presentation; qualify the SDL host namespace explicitly.
+    SDL_Window* window = ::host::Window();
     if (!window) return nullptr;
     SDL_PropertiesID properties = SDL_GetWindowProperties(window);
     ANativeWindow* native = static_cast<ANativeWindow*>(
