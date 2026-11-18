@@ -105,6 +105,20 @@ jobs:
           set -euo pipefail
           ./gradlew --no-daemon --stacktrace :app:assembleDebug -PandroidStub
 
+      - name: Assemble signed release APK with game-free native stub
+        working-directory: android
+        shell: bash
+        env:
+          MADAGASCAR_KEYSTORE: ${{ github.workspace }}/android/signing/madagascar-public-release.p12
+          MADAGASCAR_KEYSTORE_TYPE: PKCS12
+          MADAGASCAR_KEYSTORE_PASSWORD: MadagascarAndroidPublicKey2026
+          MADAGASCAR_KEY_ALIAS: madagascar
+          MADAGASCAR_KEY_PASSWORD: MadagascarAndroidPublicKey2026
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --stacktrace :app:assembleRelease -PandroidStub -PrequireReleaseSigning \
+            -PversionCode=100 -PversionName=0.1.0-signing-check
+
       - name: Verify APK contents and ABI
         working-directory: android
         shell: bash
@@ -116,6 +130,10 @@ jobs:
           grep -qx 'lib/arm64-v8a/libmain.so' apk-contents.txt
           grep -qx 'lib/arm64-v8a/libSDL3.so' apk-contents.txt
           ! unzip -Z1 "$apk" | grep -Eqi '\.(xbe|iso|xiso)$'
+          release=app/build/outputs/apk/release/app-release.apk
+          test -s "$release"
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose "$release"
+          "$ANDROID_HOME/build-tools/34.0.0/aapt" dump badging "$release" | grep -q "versionCode='100'"
 
       - name: Upload installable smoke-test APK
         uses: actions/upload-artifact@v5
