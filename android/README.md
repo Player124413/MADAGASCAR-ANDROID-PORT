@@ -79,9 +79,9 @@ For a real APK, do **not** pass `-PandroidStub`; first provide the authorized XB
 
 The same workflow also has a **manual** `real` mode for an image that the repository owner is authorized to use. It is never triggered by a push or pull request, and the URL is intentionally not accepted as a workflow input.
 
-1. In the repository’s **Settings → Secrets and variables → Actions**, create the secret `MADAGASCAR_ISO_URL`. Its value must be a direct HTTPS binary-download URL for the private image. A normal Google Drive sharing page is HTML and will be rejected; configure a direct download URL instead.
-2. Recommended: create `MADAGASCAR_ISO_SHA256` with the SHA-256 of the complete image. This detects a changed, partial, or substituted download before parsing it.
-3. Open **Actions → Android APK → Run workflow**, select `build_mode: real`, and run it only in an access-controlled repository/environment.
+1. Open **Actions → Android APK → Run workflow**, select `build_mode: real`, and paste an HTTPS direct-download URL **or a Google Drive file-sharing URL** into `iso_url`. The job handles Google Drive’s large-file confirmation page. The input is visible in the manual run’s metadata, so use it only in an access-controlled repository/environment.
+2. For a stable private link, use the Actions secret `MADAGASCAR_ISO_URL` instead and leave `iso_url` blank. A secret is preferred because it is masked and does not appear in run metadata.
+3. Recommended: create `MADAGASCAR_ISO_SHA256` with the SHA-256 of the complete image. This detects a changed, partial, or substituted download before parsing it. It applies to either URL source.
 
 The Windows job downloads the URL without printing it, extracts only `default.xbe` with `android/tools/extract_xdvdfs.py`, checks it against the expected USA XBE SHA-256, runs `kit/ferramentas/recompilar.ps1`, and then builds the ARM64 release APK. It removes the ISO, XBE and generated directory at the end of the ephemeral runner job. The APK is **not uploaded by default**; the `upload_real_apk` checkbox has to be explicitly selected and keeps the artifact for one day. Do not enable that option in a public repository or for collaborators who are not authorized to receive the resulting game-derived build.
 

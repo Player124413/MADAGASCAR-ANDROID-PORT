@@ -14,13 +14,17 @@ on:
   workflow_dispatch:
     inputs:
       build_mode:
-        description: "stub validates the public toolchain; real downloads a private, authorized image from a repository secret"
+        description: "stub validates the public toolchain; real downloads an authorized private image"
         type: choice
         required: true
         default: stub
         options:
           - stub
           - real
+      iso_url:
+        description: "Real mode only: direct HTTPS URL or Google Drive share URL for your authorized Xbox image. Visible to users who can view this run; leave blank to use secret MADAGASCAR_ISO_URL."
+        type: string
+        required: false
       upload_real_apk:
         description: "Upload the real APK as a one-day private CI artifact (only enable in a private, access-controlled repository)"
         type: boolean
@@ -112,15 +116,17 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # A real build is deliberately manual. The image URL is read only from MADAGASCAR_ISO_URL, never from YAML or a
-  # workflow input, so it does not appear in source control or job logs. This must only point to an authorized copy.
+  # A real build is deliberately manual. Its URL comes from the per-run iso_url input or the MADAGASCAR_ISO_URL
+  # secret, never from repository YAML/source. The secret option avoids exposing a stable private URL in run metadata.
   apk-real:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_mode == 'real' }}
     name: Build ARM64 APK from authorized private image
     runs-on: windows-2022
     timeout-minutes: 180
     env:
-      MADAGASCAR_ISO_URL: ${{ secrets.MADAGASCAR_ISO_URL }}
+      # Prefer the explicit manual-run value so a different authorized image can be used per run. A secret keeps
+      # a stable private URL out of run metadata; it is used when iso_url is intentionally left blank.
+      MADAGASCAR_ISO_URL: ${{ inputs.iso_url || secrets.MADAGASCAR_ISO_URL }}
       MADAGASCAR_ISO_SHA256: ${{ secrets.MADAGASCAR_ISO_SHA256 }}
       EXPECTED_XBE_SHA256: 5a21c1357e652971199c11bc7bb00ac1a9acf7a23d6b1ad321528e9d60b6444c
 
@@ -140,12 +146,22 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if ([string]::IsNullOrWhiteSpace($env:MADAGASCAR_ISO_URL)) {
-            throw 'Set the MADAGASCAR_ISO_URL Actions secret to a direct HTTPS download URL before selecting real mode.'
+            throw 'Enter iso_url for this manual run or set the MADAGASCAR_ISO_URL Actions secret before selecting real mode.'
+          }
+          if ($env:MADAGASCAR_ISO_URL -notmatch '^https://') {
+            throw 'The image URL must use HTTPS.'
           }
           $iso = Join-Path $env:RUNNER_TEMP 'madagascar.iso'
-          curl.exe --fail --location --retry 3 --retry-delay 2 --output $iso $env:MADAGASCAR_ISO_URL
+          if ($env:MADAGASCAR_ISO_URL -match '^https://(drive|docs)\.google\.com/') {
+            # gdown handles Google's confirmation-token page for large Drive files. The URL remains only in the
+            # process environment and is never interpolated into a command that is echoed by the shell.
+            python -m pip install --disable-pip-version-check --no-cache-dir 'gdown==5.2.0'
+            python -m gdown --quiet --fuzzy --output $iso $env:MADAGASCAR_ISO_URL
+          } else {
+            curl.exe --fail --location --retry 3 --retry-delay 2 --output $iso $env:MADAGASCAR_ISO_URL
+          }
           if (!(Test-Path $iso) -or (Get-Item $iso).Length -lt 1MB) {
-            throw 'The download is missing or implausibly small. Use a direct binary-download URL, not an HTML share page.'
+            throw 'The download is missing or implausibly small. Use a direct binary-download URL or a Google Drive file-sharing URL.'
           }
           "MADAGASCAR_ISO_PATH=$iso" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
