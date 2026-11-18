@@ -63,6 +63,18 @@ The debug build intentionally compiles native code in `Release` mode because uno
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
+### CI smoke test
+
+[`.github/workflows/android-apk.yml`](../.github/workflows/android-apk.yml) installs the pinned JDK/SDK/NDK/CMake versions and runs:
+
+```bash
+./gradlew :app:assembleDebug -PandroidStub
+```
+
+`-PandroidStub` selects an intentionally tiny `libmain.so`, rather than the Xbox-derived generated sources. The workflow then verifies that the APK contains only `arm64-v8a` native libraries (`libSDL3.so` and `libmain.so`) and no XBE/ISO/XISO files, then uploads it as a seven-day CI artifact. This is a reproducibility and packaging test, **not a playable build or game test**.
+
+For a real APK, do **not** pass `-PandroidStub`; first provide the legal XBE and every generated partition listed above. A real build is expected to fail early with an explicit missing-input message if they are absent. Run the stub job from the GitHub Actions tab after changing Gradle/CMake/manifest code, then build and exercise the real APK locally or in a private CI environment where the game-derived inputs are available.
+
 ## First run and controls
 
 1. Install the APK. The launcher requests no broad storage permission.

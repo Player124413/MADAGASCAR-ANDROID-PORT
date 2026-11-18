@@ -32,6 +32,10 @@ android {
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_STL=c++_shared"
+                // Used only by the CI smoke test. A stub builds libmain.so but contains no game or recompiled code.
+                if (project.hasProperty("androidStub")) {
+                    arguments "-DMADAGASCAR_ANDROID_STUB=ON"
+                }
                 if (project.hasProperty("xbeGenerated")) {
                     arguments "-DXBE_GENERATED=${project.xbeGenerated}"
                 }
