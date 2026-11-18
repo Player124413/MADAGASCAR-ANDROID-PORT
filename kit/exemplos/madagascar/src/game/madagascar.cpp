@@ -1,12 +1,19 @@
 // Madagascar: what src/common needs from the game, plus game-specific hooks
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <string>
+#include <thread>
 
 #include "app/app.h"
+#include "common/menu.h"
 #include "common/options.h"
 #include "core/log.h"
 #include "kernel/kernel.h"
 #include "xdk/hle.h"
+#ifdef MADAGASCAR_ANDROID
+#include "host.h"
+#endif
 
 using namespace kernel;
 
@@ -15,6 +22,70 @@ namespace game {
 bool HasLanguages() { return false; }
 bool LanguageAvailable(const std::string& code) { return code == "int"; }
 bool HudShown() { return true; }
+
+#ifdef MADAGASCAR_ANDROID
+namespace {
+
+// The retail Xbox game advances its simulation once for each D3D Swap. On a faster Android display, simply raising
+// the host cap therefore makes its frame-based gameplay run too quickly. Keep the game thread at its original 30 Hz
+// and let D3D present the finished picture additional times. The Xbox clocks remain wall-clock based: audio workers,
+// loading, guest waits and streaming timeouts must never be slowed or quantized with the simulation.
+constexpr uint32_t kSimulationFps = 30;
+
+uint32_t PresentationTargetFps() {
+    const uint32_t cap = app::Get().fps_cap;
+    if (cap == 0 || cap == app::kFpsCapRefresh) {
+        // Unlimited means no artificial host cap. With a synchronized Android surface the useful ceiling is the
+        // panel's own rate; use it to decide how many completed game pictures should be presented.
+        return std::clamp(uint32_t(std::lround(host::DisplayRefreshRate())), kSimulationFps, 240u);
+    }
+    return std::clamp(cap, kSimulationFps, 240u);
+}
+
+}  // namespace
+
+uint32_t PresentationPasses() {
+    const uint32_t target = PresentationTargetFps();
+    static uint32_t last_target = 0;
+    static uint32_t remainder = 0;
+    if (target != last_target) {
+        last_target = target;
+        remainder = 0;
+    }
+    // Bresenham-style distribution keeps 45 Hz close to one then two passes on alternating simulation frames,
+    // while 60/90/120 Hz map exactly to 2/3/4 completed-frame presentations at 30 Hz.
+    const uint32_t total = remainder + target;
+    uint32_t passes = total / kSimulationFps;
+    remainder = total % kSimulationFps;
+    return std::max(passes, 1u);
+}
+
+void PaceSimulation() {
+    using Clock = std::chrono::steady_clock;
+    static Clock::time_point next{};
+    static uint32_t last_target = 0;
+    const uint32_t target = PresentationTargetFps();
+    if (target <= kSimulationFps) {
+        // app::PaceFrame owns the normal 30 FPS cap. Reset this timeline so changing the cap never creates a stale
+        // sleep on the next high-rate frame.
+        last_target = target;
+        next = {};
+        return;
+    }
+
+    const Clock::time_point now = Clock::now();
+    const auto period = std::chrono::nanoseconds(1000000000ull / kSimulationFps);
+    if (target != last_target || next == Clock::time_point{}) {
+        last_target = target;
+        next = now;
+    }
+    next += period;
+    // Recover cleanly after Android pauses, shader compilation or a loading hitch instead of paying back old time.
+    if (next < now - period) next = now;
+    while (Clock::now() + std::chrono::milliseconds(2) < next) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    while (Clock::now() < next) std::this_thread::yield();
+}
+#endif
 
 }  // namespace game
 

@@ -728,19 +728,33 @@ HLE_STDCALL(D3DDevice_Swap, 1) {
     ApplyPendingGamma();
     if (RampKey() != g_ramp_brightness) SendGamma();
     DrawOverlayForSwap();
+    uint32_t presentation_passes = 1;
+#ifdef MADAGASCAR_ANDROID
+    // Madagascar ties simulation to this guest Swap. At a high Android rate, show the completed frame more than once
+    // instead of letting a second/third/fourth simulation tick advance gameplay too soon. The renderer receives the
+    // same immutable front surface before RotateBuffers changes the guest headers below.
+    presentation_passes = game::PresentationPasses();
+#endif
     if (g_backend) {
         FrameTimes::Clock::time_point t0 = FrameTimes::Clock::now();
-        g_backend->Present(SurfaceOf(g_buffers[1]));
+        const gpu::Surface front = SurfaceOf(g_buffers[1]);
+        for (uint32_t pass = 0; pass < presentation_passes; pass++) {
+            g_backend->Present(front);
+            g_backend_presents++;
+        }
         FrameTimes::Clock::time_point t1 = FrameTimes::Clock::now();
         g_times.present += FrameTimes::Ms(t0, t1);
-        // the title records one frame while the GPU draws the one before it: a GPU bound frame rate then paces the
-        // game like a frame rate cap, and the frame times the game measures match the frames shown
-        if (g_backend_presents) gpu::WaitGpuFrame(g_backend_presents - 1);
+        // The threaded renderer intentionally leaves the most recent picture in flight. All earlier presentation
+        // passes have completed, which gives a synchronized display each requested refresh without stalling the game
+        // on the final duplicate.
+        if (g_backend_presents > 1) gpu::WaitGpuFrame(g_backend_presents - 2);
         g_times.gpu += FrameTimes::Ms(t1, FrameTimes::Clock::now());
-        g_backend_presents++;
     }
     FrameTimes::Clock::time_point t2 = FrameTimes::Clock::now();
     app::PaceFrame();
+#ifdef MADAGASCAR_ANDROID
+    game::PaceSimulation();
+#endif
     g_times.pace += FrameTimes::Ms(t2, FrameTimes::Clock::now());
     g_times.swap_end = FrameTimes::Clock::now();
     RotateBuffers();

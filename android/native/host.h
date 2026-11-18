@@ -21,6 +21,8 @@ uint32_t SurfaceEpoch();
 void WaitForeground();
 // the window's size in pixels
 void WindowPixels(int& w, int& h);
+// current panel refresh rate, with a conservative 60 Hz fallback while Android has not supplied a window yet
+float DisplayRefreshRate();
 
 }  // namespace host
 

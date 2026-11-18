@@ -61,7 +61,7 @@
 
     <!-- Графика в лаунчере -->
     <string name="graphics_title">Графика и производительность</string>
-    <string name="graphics_description">Настройки сохраняются до запуска игры. В режиме «Авто» сначала используется Vulkan, а OpenGL ES включается только если Vulkan не запускается; GLES можно выбрать напрямую для проверки драйвера.</string>
+    <string name="graphics_description">Настройки сохраняются до запуска игры. В режиме «Авто» сначала используется Vulkan, а OpenGL ES включается только если Vulkan не запускается; GLES можно выбрать напрямую для проверки драйвера. Оригинальная симуляция Madagascar работает на частоте 30 Гц и при 60 FPS и выше сохраняет нормальную скорость: высокая частота показа не ускоряет игру, анимацию, физику, таймеры, звук или ролики.</string>
     <string name="graphics_performance_section">ПРОИЗВОДИТЕЛЬНОСТЬ</string>
     <string name="graphics_quality_section">КАЧЕСТВО</string>
     <string name="graphics_aspect_ratio">Соотношение сторон</string>
@@ -89,6 +89,7 @@
     <string name="graphics_hdr">Тональная HDR-коррекция</string>
     <string name="graphics_percent">%1$d%%</string>
     <string name="graphics_fps">%1$d FPS</string>
+    <string name="graphics_unlimited">Без ограничений</string>
     <string name="graphics_seconds">%1$d с</string>
     <string name="graphics_off">Выкл.</string>
     <string name="graphics_on">Вкл.</string>

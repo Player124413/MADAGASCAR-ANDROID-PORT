@@ -79,8 +79,11 @@ void FramePacer::Pace() {
         frames_ = 0;
         fps_start_ = now;
     }
+    // D3DDevice_Swap owns Madagascar's frame policy. At 60 FPS and above it emits repeated completed pictures while
+    // holding the game's simulation at 30 Hz; applying app::fps_cap again after every repeated GLES present would
+    // turn a 45/60 Hz presentation request into an accidental slow-motion simulation. An explicit renderer limit is
+    // still available through SetFrameLimit for code that truly needs one.
     uint32_t limit = g_frame_limit.load();
-    if (!limit) limit = app::Get().fps_cap;
     if (!limit) {
         next_ = {};
         dynres::Frame();

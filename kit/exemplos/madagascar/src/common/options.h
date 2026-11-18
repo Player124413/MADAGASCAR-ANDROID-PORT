@@ -86,4 +86,12 @@ inline std::atomic<uint32_t> g_focus_pauses{0};  // focus pauses ended so far
 void WaitWhileUnfocused();  // native/game_host.cpp: game thread, before the present
 bool HudShown();  // src/game/hud.cpp: the player's HUD drew lately, a hint's pause too
 
+#ifdef MADAGASCAR_ANDROID
+// Madagascar advances its gameplay once per Swap and was authored around a 30 Hz simulation. A high Android
+// presentation cap repeats completed pictures between simulation ticks instead of making animation, physics and
+// game timers run faster. These are called by the Android D3D Swap implementation on the game thread.
+uint32_t PresentationPasses();
+void PaceSimulation();
+#endif
+
 }  // namespace game

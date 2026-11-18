@@ -72,7 +72,7 @@ void CheckForUpdates();
 
 namespace app {
 
-Settings DefaultSettings();  // native/main.cpp: a phone's first run, unlimited frame rate and vsync off
+Settings DefaultSettings();  // native/main.cpp: a phone's first run, original 30 FPS simulation and v-sync
 
 namespace {
 
@@ -114,7 +114,7 @@ constexpr uint32_t kAudioOutputs[] = {audio::kOutputAuto, audio::kOutputMono, au
 const char* const kAudioOutputNames[] = {"AUTOMATIC", "MONO", "2.0 STEREO", "5.1 SURROUND"};
 const char* const kLanguageNames[] = {"ENGLISH", "FRENCH", "GERMAN", "ITALIAN", "SPANISH",
                                       "INDONESIAN"};  // as game::kLanguages
-constexpr uint32_t kFpsCaps[] = {30, 60, 75, 90, 120, 144, 165, 240, 360, kFpsCapRefresh, 0};
+constexpr uint32_t kFpsCaps[] = {30, 45, 60, 75, 90, 120, 144, 165, 240, 360, kFpsCapRefresh, 0};
 #ifdef MADAGASCAR_ANDROID
 constexpr uint32_t kDynamicTargets[] = {20, 24, 25, 30, 40, 45, 60};
 constexpr uint32_t kAndroidAntiAliasings[] = {0, 1, 2};
@@ -486,7 +486,7 @@ bool StepDisplayRow(int id, int step, Settings& s, char (&text)[64]) {
             uint32_t cap = kFpsCaps[StepTable(kFpsCaps, s.fps_cap, step)];
             if (cap == kFpsCapRefresh) std::snprintf(text, sizeof(text), "REFRESH RATE");
             else if (cap) std::snprintf(text, sizeof(text), "%u", cap);
-            else std::snprintf(text, sizeof(text), "UNLIMITED (DEFAULT)");
+            else std::snprintf(text, sizeof(text), "UNLIMITED");
             return true;
         }
         default:
@@ -1051,6 +1051,13 @@ void PaceAt(uint32_t cap) {
 }  // namespace
 
 void PaceFrame() {
+#ifdef MADAGASCAR_ANDROID
+    const uint32_t cap = Get().fps_cap;
+    // D3DDevice_Swap repeats a completed picture for high Android presentation rates, then game::PaceSimulation
+    // maintains the retail 30 Hz update cadence. A second host cap here would pace every guest Swap at 45/60/etc.
+    // and either fight that cadence or turn a fractional 45 Hz repeat pattern into slow motion.
+    if (cap == 0 || cap == kFpsCapRefresh || cap > 30) return;
+#endif
     if (Get().fps_cap != kFpsCapRefresh) {
         Pace();
         return;

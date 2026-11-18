@@ -402,7 +402,9 @@ public final class LauncherActivity extends Activity {
 
     private String[] fpsChoices(int[] values) {
         String[] choices = new String[values.length];
-        for (int i = 0; i < values.length; i++) choices[i] = getString(R.string.graphics_fps, values[i]);
+        for (int i = 0; i < values.length; i++) {
+            choices[i] = values[i] == 0 ? getString(R.string.graphics_unlimited) : getString(R.string.graphics_fps, values[i]);
+        }
         return choices;
     }
 

@@ -20,7 +20,9 @@ final class GraphicsSettings {
     private static final int DEFAULTS_VERSION = 5;
 
     static final int[] RENDER_SCALES = {50, 67, 75, 85, 100};
-    static final int[] FPS_CAPS = {30, 45, 60};
+    // 0 is the persisted/native unlimited value. The game keeps its original 30 Hz simulation at every high
+    // presentation rate, so this does not speed up gameplay, timers, physics or cutscenes.
+    static final int[] FPS_CAPS = {30, 45, 60, 90, 120, 0};
     static final int[] ANISOTROPY = {0, 2, 4, 8, 16};
     static final int[] DYNAMIC_TARGETS = {30, 45, 60};
     static final int[] DYNAMIC_MIN = {35, 45, 55, 67};

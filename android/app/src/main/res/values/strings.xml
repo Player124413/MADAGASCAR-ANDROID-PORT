@@ -61,7 +61,7 @@
 
     <!-- Launcher graphics settings -->
     <string name="graphics_title">Graphics and performance</string>
-    <string name="graphics_description">These settings are saved before the game starts. Auto keeps Vulkan first and uses OpenGL ES only if Vulkan cannot start; choose GLES directly for driver troubleshooting.</string>
+    <string name="graphics_description">These settings are saved before the game starts. Auto keeps Vulkan first and uses OpenGL ES only if Vulkan cannot start; choose GLES directly for driver troubleshooting. Madagascar’s original 30 Hz simulation stays at normal speed at 60 FPS and above, so high presentation rates never accelerate gameplay, animation, physics, timers, audio or cutscenes.</string>
     <string name="graphics_performance_section">PERFORMANCE</string>
     <string name="graphics_quality_section">QUALITY</string>
     <string name="graphics_aspect_ratio">Aspect ratio</string>
@@ -89,6 +89,7 @@
     <string name="graphics_hdr">HDR tone mapping</string>
     <string name="graphics_percent">%1$d%%</string>
     <string name="graphics_fps">%1$d FPS</string>
+    <string name="graphics_unlimited">Unlimited</string>
     <string name="graphics_seconds">%1$d s</string>
     <string name="graphics_off">Off</string>
     <string name="graphics_on">On</string>

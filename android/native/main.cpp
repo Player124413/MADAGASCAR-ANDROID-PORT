@@ -117,6 +117,8 @@ void WindowPixels(int& w, int& h) {
     if (g_window) SDL_GetWindowSizeInPixels(g_window, &w, &h);
 }
 
+float DisplayRefreshRate() { return RefreshRate(); }
+
 }  // namespace host
 
 namespace app {
