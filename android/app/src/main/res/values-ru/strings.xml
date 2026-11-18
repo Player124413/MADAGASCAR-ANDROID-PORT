@@ -36,7 +36,7 @@
 
     <!-- Редактор Xbox-сенсорного управления в лаунчере -->
     <string name="touch_editor_title">Редактирование Xbox-управления</string>
-    <string name="touch_editor_hint">Нажмите кнопку Xbox и перетащите её. Размер меняется кнопками – / +.</string>
+    <string name="touch_editor_hint">Левый стик закреплён и всегда виден. Нажмите кнопку Xbox и перетащите её; размер меняется кнопками – / +.</string>
     <string name="touch_editor_selected">Выбрано: %1$s · %2$s</string>
     <string name="touch_editor_visible">ВИДНО</string>
     <string name="touch_editor_hidden">СКРЫТО</string>

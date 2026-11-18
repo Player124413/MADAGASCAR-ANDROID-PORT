@@ -61,8 +61,6 @@ void StepOpacity(int step);
 uint32_t ControlsSize();  // percent of each control's own size
 void StepSize(int step);
 void EditLayout();  // the controls over the screen to drag where they go
-const char* StickModeName();  // FLOATING (under the thumb) or FIXED (in its place)
-void StepStickMode(int step);
 // render thread, once: the skins' atlas as RGBA from the APK's assets, then its ImGui texture
 bool LoadSkin(std::vector<uint8_t>& rgba, uint32_t& w, uint32_t& h);
 void SetSkinTexture(uint64_t texture);

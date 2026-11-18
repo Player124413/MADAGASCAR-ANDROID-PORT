@@ -662,7 +662,8 @@ Layout g_layout = kTwoFinger;
 size_t g_preset = 0;
 float g_opacity = 0.85f;
 float g_scale = 1.0f;  // every control's size, on top of its own
-bool g_fixed_stick = false;  // the stick stays in its place, else it comes down under the thumb
+// Keep the left stick fixed and visible. A floating, thumb-only stick is too easy to lose on a touch screen.
+bool g_fixed_stick = true;
 bool g_loaded = false;
 // the editor: the layout before it opened (for Cancel), the control picked
 std::atomic<bool> g_editing{false};
@@ -696,7 +697,9 @@ void LoadLayout() {
         g_scale = std::clamp(float(t["scale"].value_or(double(g_scale))), 0.5f, 1.5f);
         // This port intentionally uses only the original Xbox button artwork. An old custom/classic/clean skin
         // value is intentionally ignored so an update cannot silently bring a non-Xbox skin back.
-        g_fixed_stick = t["stick"].value_or(std::string("floating")) == "fixed";
+        // Old layouts may say "floating". The Android port now keeps the left Xbox stick visible and fixed, so
+        // an update immediately repairs that confusing/invisible layout mode.
+        g_fixed_stick = true;
         for (size_t i = 0; i <= kButtonCount; i++) {
             // the menus' controls are not in the editor: always the preset's
             if (i != kStick && kButtons[i].when == When::Menus) continue;
@@ -722,7 +725,7 @@ void SaveLayout() {
     }
     // The button skin is fixed to the original Xbox artwork, so it is not a player-selectable layout value.
     toml::table t{{"preset", kPresets[g_preset].id}, {"opacity", double(g_opacity)}, {"scale", double(g_scale)},
-                  {"stick", g_fixed_stick ? "fixed" : "floating"}, {"controls", controls}};
+                  {"stick", "fixed"}, {"controls", controls}};
     std::ofstream(LayoutFile()) << t << "\n";
 }
 
@@ -1367,6 +1370,9 @@ void DrawIcon(const Pen& p, Icon icon) {
 // a colour at the layout's opacity
 ImU32 Fade(int r, int g, int b, int a) { return IM_COL32(r, g, b, int(float(a) * g_opacity)); }
 
+// The movement control must remain easy to find even when a player deliberately lowers the rest of the HUD opacity.
+ImU32 StickFade(int r, int g, int b, int a) { return IM_COL32(r, g, b, std::max(145, int(float(a) * g_opacity))); }
+
 // ---- fixed Xbox artwork: buttons.png cells follow SkinPart's order. It uses the physical Xbox labels (A/B/X/Y,
 // triggers, sticks, D-pad, Start and Back), never the legacy game-action or clean artwork. Each image is a cell wide
 // and sits at its bottom, so a button's circle is the cell's width across.
@@ -1422,7 +1428,7 @@ void SkinImage(ImDrawList* dl, SkinPart part, ImVec2 c, float r, ImU32 tint) {
 }
 
 void DrawStick(ImDrawList* dl, float th) {
-    // at rest in its place, else where the thumb came down (its place too, when fixed)
+    // The fixed Xbox left stick is always drawn at its saved position, then its knob follows the thumb while held.
     float r = Radius(kStick);
     ImVec2 at(g_layout[kStick].x * Width(), g_layout[kStick].y * Height());
     bool held = false;
@@ -1434,23 +1440,23 @@ void DrawStick(ImDrawList* dl, float th) {
     if (Skinned()) {
         // the ring with its arrows is the knob, about seven tenths of the base; it travels half the base's radius
         constexpr float kKnob = 0.72f, kTravel = 0.5f;
-        SkinImage(dl, kStickBase, at, r, Fade(255, 255, 255, held ? 200 : 150));
+        SkinImage(dl, kStickBase, at, r, StickFade(255, 255, 255, held ? 255 : 235));
         ImVec2 knob(at.x + g_stick_x * r * kTravel, at.y - g_stick_y * r * kTravel);
-        SkinImage(dl, kStickKnob, knob, r * kKnob, Fade(255, 255, 255, held ? 255 : 200));
+        SkinImage(dl, kStickKnob, knob, r * kKnob, StickFade(255, 255, 255, held ? 255 : 245));
         return;
     }
-    dl->AddCircleFilled(at, r, Fade(0, 0, 0, held ? 80 : 55), 64);
-    dl->AddCircle(at, r, Fade(255, 255, 255, held ? 110 : 70), 64, th * 0.7f);
+    dl->AddCircleFilled(at, r, StickFade(0, 0, 0, held ? 150 : 125), 64);
+    dl->AddCircle(at, r, StickFade(255, 255, 255, held ? 230 : 205), 64, th * 0.7f);
     for (int i = 0; i < 4; i++) {  // the four directions
         float a = i * kPi / 2;
         ImVec2 tip(at.x + std::cos(a) * r * 0.86f, at.y + std::sin(a) * r * 0.86f);
         ImVec2 l(at.x + std::cos(a + 0.12f) * r * 0.74f, at.y + std::sin(a + 0.12f) * r * 0.74f);
         ImVec2 rr(at.x + std::cos(a - 0.12f) * r * 0.74f, at.y + std::sin(a - 0.12f) * r * 0.74f);
-        dl->AddTriangleFilled(tip, l, rr, Fade(255, 255, 255, held ? 140 : 90));
+        dl->AddTriangleFilled(tip, l, rr, StickFade(255, 255, 255, held ? 220 : 175));
     }
     ImVec2 knob(at.x + g_stick_x * r, at.y - g_stick_y * r);
-    dl->AddCircleFilled(knob, r * 0.42f, Fade(255, 255, 255, held ? 120 : 75), 48);
-    dl->AddCircle(knob, r * 0.42f, Fade(255, 255, 255, held ? 180 : 110), 48, th * 0.7f);
+    dl->AddCircleFilled(knob, r * 0.42f, StickFade(255, 255, 255, held ? 210 : 180), 48);
+    dl->AddCircle(knob, r * 0.42f, StickFade(255, 255, 255, held ? 255 : 230), 48, th * 0.7f);
 }
 
 // a text centred on a point, its height a share of the screen's
@@ -1531,7 +1537,8 @@ void Draw() {
             dl->AddLine(ImVec2(cx - k, cy + k), ImVec2(cx + k, cy - k), IM_COL32(255, 80, 60, 220), th);
         }
     }
-    if (editing || (!InMenus() && !app::MenuOpen() && input::Play())) DrawStick(dl, th);
+    // Keep the fixed left stick discoverable even before the game has requested mouse/look input for this frame.
+    if (editing || (!InMenus() && !app::MenuOpen())) DrawStick(dl, th);
     if (editing) {
         if (g_selected == int(kStick)) {
             ImVec2 at(g_layout[kStick].x * Width(), g_layout[kStick].y * h);
@@ -1603,19 +1610,6 @@ void StepSize(int step) {
     std::lock_guard lock(g_lock);
     EnsureLayout();
     g_scale = float(std::clamp(int(Percent(g_scale)) + step * 5, 50, 150)) / 100.0f;
-    SaveLayout();
-}
-
-const char* StickModeName() {
-    std::lock_guard lock(g_lock);
-    EnsureLayout();
-    return g_fixed_stick ? "FIXED" : "FLOATING";
-}
-
-void StepStickMode(int) {
-    std::lock_guard lock(g_lock);
-    EnsureLayout();
-    g_fixed_stick ^= true;
     SaveLayout();
 }
 

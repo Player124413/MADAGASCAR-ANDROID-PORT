@@ -15,7 +15,7 @@ This directory builds an **ARM64 Android Vulkan host** for the Madagascar static
   - shader specialization for opaque texture/sampler parameters, avoiding the malformed SPIR-V path that causes corruption on affected Mali drivers;
   - surface/swapchain recreation, bounded acquire waits, shader and pipeline caches, texture retirement, and 16 KiB ELF page alignment;
   - dynamic internal resolution with a conservative 30 FPS default.
-- Original-Xbox touch controls: the on-screen artwork is fixed to the physical Xbox labels and colours (A/B/X/Y, LT/RT, sticks, D-pad, Start and Back) and maps only to original Xbox inputs. The launcher has a landscape drag editor: tap a control, drag it, resize it with – / +, hide/show it, reset or save. It writes `layout.toml` before the next game launch; non-Xbox gyro and gear overlays stay hidden.
+- Original-Xbox touch controls: the on-screen artwork is fixed to the physical Xbox labels and colours (A/B/X/Y, LT/RT, sticks, D-pad, Start and Back) and maps only to original Xbox inputs. The fixed left stick is always visible, even at low HUD opacity. The launcher has a landscape drag editor: tap a control, drag it, resize it with – / +, hide/show it, reset or save. Its bottom tool strip never covers the editable preview. It writes `layout.toml` before the next game launch; non-Xbox gyro and gear overlays stay hidden.
 - Gamepad, mouse/keyboard, virtual-controller and controller-gyro routing.
 
 The imported reference code is covered by [`LICENSE-Black-Android`](LICENSE-Black-Android). See the root project notices for the remaining licenses.

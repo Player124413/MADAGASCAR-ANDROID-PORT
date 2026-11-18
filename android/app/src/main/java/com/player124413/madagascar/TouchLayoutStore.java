@@ -53,8 +53,6 @@ final class TouchLayoutStore {
         String preset = "default";
         float opacity = 0.85f;
         float scale = 1.0f;
-        boolean fixedStick;
-
         Layout() {
             reset();
         }
@@ -63,7 +61,6 @@ final class TouchLayoutStore {
             preset = "default";
             opacity = 0.85f;
             scale = 1.0f;
-            fixedStick = false;
             for (int i = 0; i < IDS.length; i++) {
                 x[i] = DEFAULTS[i][0];
                 y[i] = DEFAULTS[i][1];
@@ -110,7 +107,7 @@ final class TouchLayoutStore {
                     if ("preset".equals(key)) layout.preset = unquote(value, layout.preset);
                     else if ("opacity".equals(key)) layout.opacity = range(number(value, layout.opacity), 0.2f, 1.0f);
                     else if ("scale".equals(key)) layout.scale = range(number(value, layout.scale), 0.5f, 1.5f);
-                    else if ("stick".equals(key)) layout.fixedStick = "fixed".equals(unquote(value, "floating"));
+                    // A legacy stick = "floating" value is intentionally ignored: Android always writes fixed.
                     continue;
                 }
                 if ("x".equals(key)) layout.x[current] = range(number(value, layout.x[current]), 0f, 1f);
@@ -138,7 +135,7 @@ final class TouchLayoutStore {
             out.write("\"\n");
             out.write(String.format(Locale.ROOT, "opacity = %.3f%nscale = %.3f%n", layout.opacity, layout.scale));
             out.write("stick = \"");
-            out.write(layout.fixedStick ? "fixed" : "floating");
+            out.write("fixed");
             out.write("\"\n\n");
             for (int i = 0; i < IDS.length; i++) {
                 out.write("[controls.");

@@ -56,10 +56,6 @@ void StepOpacity(int step);
 uint32_t ControlsSize();
 void StepSize(int step);
 void EditLayout();
-#ifdef MADAGASCAR_ANDROID
-const char* StickModeName();
-void StepStickMode(int step);
-#endif
 }  // namespace touch
 
 #ifdef MADAGASCAR_ANDROID
@@ -273,7 +269,7 @@ enum RowId { kRenderResolution, kMaxFps, kVsync, kFpsCounter, kAniso, kReloadBlu
              kScreenFilter, kGyroInvertX, kGyroInvertY, kUnlockLevels, kUnlockBlackOps, kBrightness, kSkipRevsub, kSkipShadow,
              kGyroVertical, kGyroAxis, kGyroSteadiness, kGyroDriftFix, kOled,
 #ifdef MADAGASCAR_ANDROID
-             kTouchStick, kBloom, kFog, kAntiAliasing, kHdr, kDynamicRes, kDynamicTarget, kDynamicMin,
+             kBloom, kFog, kAntiAliasing, kHdr, kDynamicRes, kDynamicTarget, kDynamicMin,
              kDynamicMax, kDynamicHold
 #endif
 };
@@ -316,9 +312,6 @@ constexpr Row kTouchRows[] = {
     {Kind::Value, kTouchLayout, "CONTROLS LAYOUT"},
     {Kind::Value, kTouchOpacity, "CONTROLS OPACITY"},
     {Kind::Value, kTouchSize, "CONTROLS SIZE"},
-#ifdef MADAGASCAR_ANDROID
-    {Kind::Value, kTouchStick, "ANALOG STICK"},
-#endif
     {Kind::Value, kTouchEdit, "EDIT CONTROLS POSITION"},
 #ifdef __SWITCH__
     {Kind::Heading, -1, "MOTION CONTROLS"},
@@ -584,12 +577,6 @@ void StepInputRow(int id, int step, char (&text)[64]) {
             if (step) touch::StepSize(step);
             std::snprintf(text, sizeof(text), "%u%%", touch::ControlsSize());
             break;
-#ifdef MADAGASCAR_ANDROID
-        case kTouchStick:
-            if (step) touch::StepStickMode(step);
-            std::snprintf(text, sizeof(text), "%s", touch::StickModeName());
-            break;
-#endif
         case kTouchEdit:
             // any step opens the editor over the screen
             if (step) touch::EditLayout();

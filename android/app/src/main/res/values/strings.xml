@@ -36,7 +36,7 @@
 
     <!-- Launcher Xbox touch editor -->
     <string name="touch_editor_title">Edit Xbox touch controls</string>
-    <string name="touch_editor_hint">Tap an Xbox control, then drag it. Use – / + for its size.</string>
+    <string name="touch_editor_hint">The left stick is fixed and always visible. Tap an Xbox control, then drag it; use – / + for its size.</string>
     <string name="touch_editor_selected">%1$s selected · %2$s</string>
     <string name="touch_editor_visible">VISIBLE</string>
     <string name="touch_editor_hidden">HIDDEN</string>

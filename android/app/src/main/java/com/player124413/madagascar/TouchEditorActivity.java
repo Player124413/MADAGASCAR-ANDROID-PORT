@@ -16,7 +16,6 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -47,11 +46,14 @@ public final class TouchEditorActivity extends Activity {
     }
 
     private void buildEditor() {
-        FrameLayout root = new FrameLayout(this);
+        // Keep the tool strip outside the editable preview. The old overlay intercepted finger presses on controls
+        // underneath it, which made buttons in that part of the screen impossible to move.
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(0xFF10130F);
         editor = new LayoutEditorView();
-        root.addView(editor, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        root.addView(editor, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
 
         LinearLayout tools = new LinearLayout(this);
         tools.setOrientation(LinearLayout.VERTICAL);
@@ -85,13 +87,10 @@ public final class TouchEditorActivity extends Activity {
         scroll.addView(row, new HorizontalScrollView.LayoutParams(
                 HorizontalScrollView.LayoutParams.WRAP_CONTENT, HorizontalScrollView.LayoutParams.WRAP_CONTENT));
         tools.addView(scroll, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, dp(48)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
 
-        FrameLayout.LayoutParams toolParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        // Preserve the top Xbox Start/Back controls: unlike a conventional toolbar, this sits below them.
-        toolParams.topMargin = dp(72);
-        root.addView(tools, toolParams);
+        root.addView(tools, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         setContentView(root);
     }
 
@@ -220,11 +219,6 @@ public final class TouchEditorActivity extends Activity {
             paint.setStyle(Paint.Style.FILL);
 
             for (int index : editable) drawControl(canvas, index, width, height);
-            paint.setTextAlign(Paint.Align.CENTER);
-            paint.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
-            paint.setTextSize(dp(12));
-            paint.setColor(0xD0E0E0D8);
-            canvas.drawText(getString(R.string.touch_editor_footer), width / 2f, height - dp(18), paint);
         }
 
         private void drawControl(Canvas canvas, int index, float width, float height) {
