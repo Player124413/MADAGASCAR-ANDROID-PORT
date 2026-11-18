@@ -645,7 +645,10 @@ struct Finger {
 std::mutex g_lock;
 std::vector<Finger> g_fingers;
 bool g_pressed[kButtonCount] = {};
-float g_stick_x = 0, g_stick_y = 0;  // -1 to 1, y up
+float g_stick_x = 0, g_stick_y = 0;  // virtual left stick, -1 to 1, y up: character movement
+// Free-look is a short right-stick pulse from each drag segment on the unused part of the screen. It is consumed by
+// Apply(), so holding a finger still never keeps rotating the camera.
+float g_look_x = 0, g_look_y = 0;
 float g_cursor_x = 0, g_cursor_y = 0;  // the menu cursor, pixels
 bool g_cursor_down = false;
 bool g_cursor_touch = false;  // the cursor follows a finger, not the mouse
@@ -845,9 +848,31 @@ void UpdateStick(const Finger& f) {
     if (len > 1) {
         dx /= len;
         dy /= len;
+        len = 1;
     }
-    g_stick_x = dx;
-    g_stick_y = -dy;
+    // The game's own dead zone can swallow a gentle phone-sized drag. Give every deliberate deflection enough
+    // left-stick travel to move, while retaining an analogue ramp to full speed at the edge.
+    constexpr float kTouchDeadzone = 0.10f;
+    if (len <= kTouchDeadzone) {
+        g_stick_x = g_stick_y = 0;
+        return;
+    }
+    float response = 0.35f + 0.65f * (len - kTouchDeadzone) / (1.0f - kTouchDeadzone);
+    g_stick_x = dx / len * response;
+    g_stick_y = -dy / len * response;
+}
+
+// A normal mobile free-look: dragging anywhere outside the controls sends a brief right-stick movement. The next
+// poll consumes it, so the character keeps moving with the left stick but the camera stops as soon as the finger does.
+// Keep accumulating raw mouse counts too: a game-specific mouse hook can use the higher-resolution route when it has
+// one, while the Xbox right stick is the reliable camera path for this title.
+void QueueLook(float dx, float dy) {
+    float travel = std::max(Height() * 0.045f, 1.0f);  // about 5% of screen height is a full right-stick pulse
+    g_look_x = std::clamp(g_look_x + dx / travel, -1.0f, 1.0f);
+    g_look_y = std::clamp(g_look_y - dy / travel, -1.0f, 1.0f);
+    float k = kLookCounts / Width();
+    input::g_touch_dx += int(std::lround(dx * k));
+    input::g_touch_dy += int(std::lround(dy * k));
 }
 
 // a dpad arrow held in the menus: a step as it comes down, then steps at a calm pace once held a while; the game
@@ -934,29 +959,36 @@ void FingerDown(SDL_FingerID id, float x, float y) {
         return;
     }
     input::g_touch = true;
-    size_t b = HitButton(x, y);
-    if (b < kButtonCount) {
-        f.role = Role::Button;
-        f.button = b;
-        f.down_ms = NowMs();
-        if (kButtons[b].press == kPanel) app::ToggleMenu();
-        if (kButtons[b].press == kGyro) gyro::NextMode();
-    } else if (InMenus()) {
-        // not the cursor yet: a tap clicks where it lifts, a swipe scrolls without moving the cursor
-        f.role = Role::Cursor;
-        f.menu = MenuTouch::Undecided;
-        f.down_ms = NowMs();
-        g_cursor_touch = true;
-    } else if (x < Width() * kStickZone || (g_fixed_stick && InStick(x, y))) {
+    // Movement takes priority inside the fixed left-stick circle. A moved action button (or scope-zoom button) can
+    // never steal a press from the stick and turn the camera while the player is trying to walk.
+    if (!InMenus() && InStick(x, y)) {
         f.role = Role::Stick;
-        // fixed: pushed from its own centre, at once wherever the thumb came down
-        if (g_fixed_stick) {
+        f.x0 = g_layout[kStick].x * Width();
+        f.y0 = g_layout[kStick].y * Height();
+        UpdateStick(f);
+    } else {
+        size_t b = HitButton(x, y);
+        if (b < kButtonCount) {
+            f.role = Role::Button;
+            f.button = b;
+            f.down_ms = NowMs();
+            if (kButtons[b].press == kPanel) app::ToggleMenu();
+            if (kButtons[b].press == kGyro) gyro::NextMode();
+        } else if (InMenus()) {
+            // not the cursor yet: a tap clicks where it lifts, a swipe scrolls without moving the cursor
+            f.role = Role::Cursor;
+            f.menu = MenuTouch::Undecided;
+            f.down_ms = NowMs();
+            g_cursor_touch = true;
+        } else if (x < Width() * kStickZone) {
+            // A generous left-side activation area makes movement practical without needing pixel-perfect taps.
+            f.role = Role::Stick;
             f.x0 = g_layout[kStick].x * Width();
             f.y0 = g_layout[kStick].y * Height();
             UpdateStick(f);
+        } else {
+            f.role = Role::Look;
         }
-    } else {
-        f.role = Role::Look;
     }
     g_fingers.push_back(f);
     Recount();
@@ -1027,11 +1059,7 @@ void FingerMove(SDL_FingerID id, float x, float y) {
             }
         }
         if (f.role == Role::Stick) UpdateStick(f);
-        if (f.role == Role::Look || (f.role == Role::Button && kButtons[f.button].look)) {
-            float k = kLookCounts / Width();
-            input::g_touch_dx += int(std::lround(dx * k));
-            input::g_touch_dy += int(std::lround(dy * k));
-        }
+        if (f.role == Role::Look || (f.role == Role::Button && kButtons[f.button].look)) QueueLook(dx, dy);
         if (f.role == Role::Cursor) MenuMove(f);
     }
 }
@@ -1177,6 +1205,16 @@ void Apply(int port, input::Pad& pad) {
         used = true;
         pad.lx = int16_t(std::clamp(g_stick_x, -1.0f, 1.0f) * 32767.0f);
         pad.ly = int16_t(std::clamp(g_stick_y, -1.0f, 1.0f) * 32767.0f);
+    }
+    if (InMenus()) {
+        // A drag that was in flight as the pause/menu opened must not turn the view when play resumes.
+        g_look_x = g_look_y = 0;
+    } else if (g_look_x || g_look_y) {
+        used = true;
+        pad.rx = int16_t(g_look_x * 32767.0f);
+        pad.ry = int16_t(g_look_y * 32767.0f);
+        // Unlike the left movement stick, look is relative: one Android drag segment is one gamepad sample.
+        g_look_x = g_look_y = 0;
     }
     if (used) pad.connected = true;
 }
