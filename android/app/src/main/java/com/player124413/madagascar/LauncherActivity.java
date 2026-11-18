@@ -40,26 +40,49 @@ public final class LauncherActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        Window w = getWindow();
-        w.setStatusBarColor(Color.rgb(16, 19, 15));
-        w.setNavigationBarColor(Color.rgb(16, 19, 15));
-        w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        try {
+            Window w = getWindow();
+            w.setStatusBarColor(Color.rgb(16, 19, 15));
+            w.setNavigationBarColor(Color.rgb(16, 19, 15));
+            w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
 
-        File files = getExternalFilesDir(null);
-        if (files == null) files = getFilesDir();
-        gameDirectory = new File(files, "game");
-        gameDirectory.mkdirs();
-        discImporter = new GameImporter(this);
-        folderImporter = new FolderImporter(this);
+            File files = getExternalFilesDir(null);
+            if (files == null) files = getFilesDir();
+            gameDirectory = new File(files, "game");
+            gameDirectory.mkdirs();
+            discImporter = new GameImporter(this);
+            folderImporter = new FolderImporter(this);
 
-        setContentView(buildLauncher());
-        refreshGameState();
+            setContentView(buildLauncher());
+            refreshGameState();
+        } catch (Throwable error) {
+            // Keep the launch activity alive long enough to show a report location instead of immediately returning
+            // to the home screen on an OEM-specific framework/resource failure.
+            MadagascarApplication.writeFailure(this, "Launcher initialization failed", error);
+            showStartupFailure(error);
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         refreshGameState();
+    }
+
+    private void showStartupFailure(Throwable error) {
+        TextView view = new TextView(this);
+        int padding = dp(24);
+        view.setPadding(padding, padding, padding, padding);
+        view.setTextColor(Color.WHITE);
+        view.setTextSize(16);
+        view.setGravity(Gravity.CENTER_VERTICAL);
+        view.setText("Не удалось открыть лаунчер Madagascar.\n\n"
+                + error.getClass().getSimpleName() + ": "
+                + (error.getMessage() == null ? "без сообщения" : error.getMessage())
+                + "\n\nОтчёт сохранён в Android/data/com.player124413.madagascar/files/logs/java-startup-crash.txt."
+                + "\n\nПришлите его содержимое вместе с моделью телефона и версией Android.");
+        view.setBackgroundColor(Color.rgb(16, 19, 15));
+        setContentView(view);
     }
 
     private View buildLauncher() {
