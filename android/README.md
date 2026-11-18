@@ -15,7 +15,7 @@ This directory builds an **ARM64 Android Vulkan host** for the Madagascar static
   - shader specialization for opaque texture/sampler parameters, avoiding the malformed SPIR-V path that causes corruption on affected Mali drivers;
   - surface/swapchain recreation, bounded acquire waits, shader and pipeline caches, texture retirement, and 16 KiB ELF page alignment;
   - dynamic internal resolution with a conservative 30 FPS default.
-- Original-Xbox touch controls: the on-screen artwork is fixed to the Xbox layout and maps to original Xbox inputs. Three placement presets, opacity, global size, fixed/floating analog stick and a drag/resize/hide editor remain available in `layout.toml`; non-Xbox gyro and gear overlays are hidden.
+- Original-Xbox touch controls: the on-screen artwork is fixed to the physical Xbox labels and colours (A/B/X/Y, LT/RT, sticks, D-pad, Start and Back) and maps only to original Xbox inputs. The launcher has a landscape drag editor: tap a control, drag it, resize it with – / +, hide/show it, reset or save. It writes `layout.toml` before the next game launch; non-Xbox gyro and gear overlays stay hidden.
 - Gamepad, mouse/keyboard, virtual-controller and controller-gyro routing.
 
 The imported reference code is covered by [`LICENSE-Black-Android`](LICENSE-Black-Android). See the root project notices for the remaining licenses.
@@ -100,7 +100,8 @@ The extractor supports a game-partition XISO and an original-disc layout with th
 1. Install the APK. The launcher requests no broad storage permission.
 2. Choose **Import Xbox ISO** or **Import folder with default.xbe**. The selected content is copied into the application’s scoped external-files directory, so the game can read it after the document picker closes.
 3. Tap **Launch game** after the launcher reports that the files are ready.
-4. In game, use the original on-screen **Start** control to open the pause/options flow. The **Touch Controls** page has Xbox layout presets, opacity, size, analog-stick mode and the layout editor. Settings are divided into short categories rather than one long mobile scroll list; the graphics page has dynamic resolution, render scale bounds, fog/bloom and anti-aliasing controls.
+4. Before launch, choose **Edit Xbox touch controls** in the launcher. Tap a labelled Xbox control and drag it, use **– Size** / **+ Size**, then save; the launcher writes the same `layout.toml` used by the native host. Choose **Graphics and performance** there to set render scale, filters, brightness/OLED, frame cap, v-sync, anisotropic filtering, dynamic-resolution bounds, anti-aliasing, bloom, fog and HDR. Both groups apply on the next game launch.
+5. In game, the original on-screen **Start** control opens the pause/options flow. The compact Touch Controls and Graphics pages remain available for adjustments during play.
 
 The app uses a landscape, immersive activity and keeps the screen awake while gameplay is active. Back/recents will pause rendering/audio through the SDL lifecycle and recreate the Vulkan surface as necessary.
 

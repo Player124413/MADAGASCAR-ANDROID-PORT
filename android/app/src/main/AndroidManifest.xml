@@ -32,6 +32,13 @@
             android:screenOrientation="sensorLandscape"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
         <activity
+            android:name=".TouchEditorActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize"
+            android:exported="false"
+            android:label="@string/touch_editor_title"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/LauncherTheme" />
+        <activity
             android:name=".LauncherActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="true"

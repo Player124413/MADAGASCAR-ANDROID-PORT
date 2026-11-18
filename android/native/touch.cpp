@@ -1367,11 +1367,13 @@ void DrawIcon(const Pen& p, Icon icon) {
 // a colour at the layout's opacity
 ImU32 Fade(int r, int g, int b, int a) { return IM_COL32(r, g, b, int(float(a) * g_opacity)); }
 
-// ---- the skins' images: one atlas, tools/make_skin.py's cells in SkinPart's order, the Xbox set then the clean one.
-// Each image is a cell wide and sits at its bottom, so a button's circle is the cell's width across
+// ---- fixed Xbox artwork: buttons.png cells follow SkinPart's order. It uses the physical Xbox labels (A/B/X/Y,
+// triggers, sticks, D-pad, Start and Back), never the legacy game-action or clean artwork. Each image is a cell wide
+// and sits at its bottom, so a button's circle is the cell's width across.
 
 enum SkinPart : int { kFire, kAim, kMode, kReload, kCrouch, kMelee, kUse, kGrenade, kWeapon, kHealth, kObjectives,
-                      kPause, kGyroPart, kBackPart, kSuppressor, kStickBase, kStickKnob, kSkinParts, kNoPart = -1 };
+                      kPause, kGyroPart, kBackPart, kSuppressor, kStickBase, kStickKnob, kDpadLeft, kSkinParts,
+                      kNoPart = -1 };
 constexpr float kSkinCellW = 192, kSkinCellH = 209;
 constexpr int kSkinColumns = 6;
 constexpr const char* kSkinFile = "skins/buttons.png";  // in the APK's assets
@@ -1396,6 +1398,13 @@ SkinPart PartOf(Icon icon) {
         case Icon::Gyro: return kGyroPart;
         case Icon::Back: return kBackPart;
         case Icon::Suppressor: return kSuppressor;
+        // Menu helper buttons still show their physical Xbox equivalents rather than generic phone arrows.
+        case Icon::Up: return kMode;
+        case Icon::Down: return kHealth;
+        case Icon::Left: return kDpadLeft;
+        case Icon::Right: return kWeapon;
+        case Icon::Enter: return kReload;
+        case Icon::Zoom: return kMode;
         default: return kNoPart;
     }
 }

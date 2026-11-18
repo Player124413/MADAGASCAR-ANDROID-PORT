@@ -12,7 +12,9 @@
     <string name="launcher_import_iso">Импортировать Xbox ISO / XISO</string>
     <string name="launcher_import_folder">Импортировать папку с default.xbe</string>
     <string name="launcher_performance">УПРАВЛЕНИЕ И ПРОИЗВОДИТЕЛЬНОСТЬ</string>
-    <string name="launcher_tip_settings">Нажмите оригинальную кнопку Xbox Start в игре, чтобы открыть паузу и настройки.</string>
+    <string name="launcher_touch_editor">РЕДАКТИРОВАТЬ XBOX-УПРАВЛЕНИЕ</string>
+    <string name="launcher_graphics">ГРАФИКА И ПРОИЗВОДИТЕЛЬНОСТЬ</string>
+    <string name="launcher_tip_settings">Перед запуском здесь меняются управление и графика. Оригинальная кнопка Xbox Start в игре также открывает паузу и настройки.</string>
     <string name="launcher_tip_touch">Сенсорное управление использует оригинальную раскладку кнопок Xbox. Размер, прозрачность и расположение меняются в «Сенсорном управлении».</string>
     <string name="launcher_tip_mali">Для Mali предусмотрены запасные пути Vulkan 1.1, CPU-декодирование DXT и динамическое разрешение.</string>
     <string name="launcher_legal">Игра не входит в приложение. Используйте файлы со своей законно полученной копии Madagascar для Xbox.</string>
@@ -31,6 +33,72 @@
     <string name="launcher_import_failed">Импорт не выполнен</string>
     <string name="launcher_startup_no_message">без сообщения</string>
     <string name="launcher_startup_failed">Не удалось открыть лаунчер Madagascar.\n\n%1$s: %2$s\n\nОтчёт сохранён в Android/data/com.player124413.madagascar/files/logs/java-startup-crash.txt.\n\nПришлите его содержимое вместе с моделью телефона и версией Android.</string>
+
+    <!-- Редактор Xbox-сенсорного управления в лаунчере -->
+    <string name="touch_editor_title">Редактирование Xbox-управления</string>
+    <string name="touch_editor_hint">Нажмите кнопку Xbox и перетащите её. Размер меняется кнопками – / +.</string>
+    <string name="touch_editor_selected">Выбрано: %1$s · %2$s</string>
+    <string name="touch_editor_visible">ВИДНО</string>
+    <string name="touch_editor_hidden">СКРЫТО</string>
+    <string name="touch_editor_smaller">– Размер</string>
+    <string name="touch_editor_bigger">+ Размер</string>
+    <string name="touch_editor_hide_show">Скрыть / показать</string>
+    <string name="touch_editor_reset">Сбросить</string>
+    <string name="touch_editor_cancel">Отмена</string>
+    <string name="touch_editor_save">Сохранить</string>
+    <string name="touch_editor_reset_done">Восстановлена стандартная раскладка Xbox</string>
+    <string name="touch_editor_select_control">Сначала выберите кнопку Xbox.</string>
+    <string name="touch_editor_stick_required">Левый стик нельзя скрыть.</string>
+    <string name="touch_editor_saved">Раскладка Xbox сохранена. Она применится при следующем запуске.</string>
+    <string name="touch_editor_save_failed_title">Не удалось сохранить управление</string>
+    <string name="touch_editor_save_failed">Не удалось сохранить layout.toml: %1$s</string>
+    <string name="touch_editor_footer">Предпросмотр раскладки Xbox · перетаскивайте кнопки</string>
+    <string name="touch_editor_content_description">Редактор раскладки сенсорного Xbox-управления</string>
+
+    <!-- Графика в лаунчере -->
+    <string name="graphics_title">Графика и производительность</string>
+    <string name="graphics_description">Настройки сохраняются до запуска игры. Динамическое разрешение рекомендуется для стабильной производительности.</string>
+    <string name="graphics_performance_section">ПРОИЗВОДИТЕЛЬНОСТЬ</string>
+    <string name="graphics_quality_section">КАЧЕСТВО</string>
+    <string name="graphics_render_scale">Разрешение рендера</string>
+    <string name="graphics_screen_filter">Фильтр экрана</string>
+    <string name="graphics_brightness">Яркость</string>
+    <string name="graphics_oled">Усиление OLED-экрана</string>
+    <string name="graphics_fps_cap">Ограничение частоты кадров</string>
+    <string name="graphics_vsync">Вертикальная синхронизация</string>
+    <string name="graphics_anisotropic">Анизотропная фильтрация</string>
+    <string name="graphics_dynamic">Динамическое разрешение</string>
+    <string name="graphics_dynamic_target">Целевая частота</string>
+    <string name="graphics_dynamic_min">Минимальное разрешение</string>
+    <string name="graphics_dynamic_max">Максимальное разрешение</string>
+    <string name="graphics_dynamic_hold">Задержка возврата качества</string>
+    <string name="graphics_anti_aliasing">Сглаживание</string>
+    <string name="graphics_bloom">Свечение</string>
+    <string name="graphics_fog">Туман</string>
+    <string name="graphics_hdr">Тональная HDR-коррекция</string>
+    <string name="graphics_percent">%1$d%%</string>
+    <string name="graphics_fps">%1$d FPS</string>
+    <string name="graphics_seconds">%1$d с</string>
+    <string name="graphics_off">Выкл.</string>
+    <string name="graphics_on">Вкл.</string>
+    <string name="graphics_oled_auto">Авто</string>
+    <string name="graphics_aniso_default">Как в игре</string>
+    <string name="graphics_aa_off">Выкл.</string>
+    <string name="graphics_aa_fxaa">FXAA</string>
+    <string name="graphics_aa_ssaa">2× SSAA</string>
+    <string name="graphics_filter_off">Выкл.</string>
+    <string name="graphics_filter_crt_light">Лёгкий CRT</string>
+    <string name="graphics_filter_crt_strong">Сильный CRT</string>
+    <string name="graphics_filter_sharp">Резкость</string>
+    <string name="graphics_filter_vibrant">Насыщенность</string>
+    <string name="graphics_filter_noir">Нуар</string>
+    <string name="graphics_filter_sepia">Сепия</string>
+    <string name="graphics_filter_night">Ночное видение</string>
+    <string name="graphics_filter_vhs">VHS</string>
+    <string name="graphics_save">Сохранить настройки</string>
+    <string name="graphics_saved">Настройки графики сохранены. Они применятся при следующем запуске.</string>
+    <string name="graphics_save_failed_title">Не удалось сохранить графику</string>
+    <string name="graphics_save_failed">Не удалось сохранить madagascar.toml: %1$s</string>
 
     <!-- Окно благодарностей. HTML-ссылки намеренны. -->
     <string name="credits_title">Madagascar Android</string>

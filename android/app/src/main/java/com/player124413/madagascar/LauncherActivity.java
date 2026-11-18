@@ -16,11 +16,14 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,6 +33,7 @@ import java.io.File;
 public final class LauncherActivity extends Activity {
     private static final int REQUEST_IMPORT_FOLDER = 0x4D42;
 
+    private File appDirectory;
     private File gameDirectory;
     private TextView statusTitle;
     private TextView statusDetail;
@@ -55,7 +59,10 @@ public final class LauncherActivity extends Activity {
 
             File files = getExternalFilesDir(null);
             if (files == null) files = getFilesDir();
-            gameDirectory = new File(files, "game");
+            // SDL's app::ExeDir() resolves to this same scoped files directory. Launcher settings are therefore
+            // applied by the native host before its first game frame, with no broad-storage permission required.
+            appDirectory = files;
+            gameDirectory = new File(appDirectory, "game");
             gameDirectory.mkdirs();
             discImporter = new GameImporter(this);
             folderImporter = new FolderImporter(this);
@@ -190,6 +197,16 @@ public final class LauncherActivity extends Activity {
         qualityTitleParams.bottomMargin = dp(10);
         page.addView(qualityTitle, qualityTitleParams);
 
+        Button touchEditor = button(getString(R.string.launcher_touch_editor), 0xFF314B37, 0xFFFFFFFF);
+        touchEditor.setOnClickListener(v -> startActivity(new Intent(this, TouchEditorActivity.class)));
+        page.addView(touchEditor, matchWrap());
+
+        Button graphics = button(getString(R.string.launcher_graphics), 0xFF272C23, 0xFFF4F0E7);
+        graphics.setOnClickListener(v -> showGraphicsSettings());
+        LinearLayout.LayoutParams graphicsParams = matchWrap();
+        graphicsParams.topMargin = dp(9);
+        page.addView(graphics, graphicsParams);
+
         LinearLayout tips = card();
         tips.setOrientation(LinearLayout.VERTICAL);
         tips.setPadding(dp(16), dp(14), dp(16), dp(14));
@@ -214,6 +231,183 @@ public final class LauncherActivity extends Activity {
         version.setLetterSpacing(0.08f);
         page.addView(version, matchWrap());
         return root;
+    }
+
+    /** Edits the TOML values read by the Android Vulkan host before launching the game. */
+    private void showGraphicsSettings() {
+        if (appDirectory == null) return;
+        GraphicsSettings.Config config = GraphicsSettings.load(appDirectory);
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(18), dp(12), dp(18), dp(12));
+
+        TextView intro = text(getString(R.string.graphics_description), 13, 0xFFD4D5CB, false);
+        intro.setLineSpacing(dp(2), 1f);
+        intro.setPadding(0, 0, 0, dp(8));
+        form.addView(intro, matchWrap());
+
+        Spinner renderScale = choice(percentChoices(GraphicsSettings.RENDER_SCALES),
+                selectedIndex(GraphicsSettings.RENDER_SCALES, config.renderPercent));
+        addSetting(form, R.string.graphics_render_scale, renderScale);
+        Spinner filter = choice(new String[] {getString(R.string.graphics_filter_off), getString(R.string.graphics_filter_crt_light),
+                        getString(R.string.graphics_filter_crt_strong), getString(R.string.graphics_filter_sharp),
+                        getString(R.string.graphics_filter_vibrant), getString(R.string.graphics_filter_noir),
+                        getString(R.string.graphics_filter_sepia), getString(R.string.graphics_filter_night),
+                        getString(R.string.graphics_filter_vhs)}, config.screenFilter);
+        addSetting(form, R.string.graphics_screen_filter, filter);
+        Spinner brightness = choice(numberChoices(GraphicsSettings.BRIGHTNESS),
+                selectedIndex(GraphicsSettings.BRIGHTNESS, config.brightness));
+        addSetting(form, R.string.graphics_brightness, brightness);
+        Spinner oled = choice(new String[] {getString(R.string.graphics_oled_auto), getString(R.string.graphics_off),
+                getString(R.string.graphics_on)}, config.oledScreen);
+        addSetting(form, R.string.graphics_oled, oled);
+
+        addSettingsHeading(form, R.string.graphics_performance_section);
+        Spinner fps = choice(fpsChoices(GraphicsSettings.FPS_CAPS), selectedIndex(GraphicsSettings.FPS_CAPS, config.fpsCap));
+        addSetting(form, R.string.graphics_fps_cap, fps);
+        Switch vsync = settingSwitch(config.vsync);
+        addSetting(form, R.string.graphics_vsync, vsync);
+        Spinner aniso = choice(new String[] {getString(R.string.graphics_aniso_default), "2×", "4×", "8×", "16×"},
+                selectedIndex(GraphicsSettings.ANISOTROPY, config.anisotropicFiltering));
+        addSetting(form, R.string.graphics_anisotropic, aniso);
+        Switch dynamic = settingSwitch(config.dynamicResolution);
+        addSetting(form, R.string.graphics_dynamic, dynamic);
+        Spinner target = choice(fpsChoices(GraphicsSettings.DYNAMIC_TARGETS),
+                selectedIndex(GraphicsSettings.DYNAMIC_TARGETS, config.dynamicTargetFps));
+        addSetting(form, R.string.graphics_dynamic_target, target);
+        Spinner dynamicMin = choice(percentChoices(GraphicsSettings.DYNAMIC_MIN),
+                selectedIndex(GraphicsSettings.DYNAMIC_MIN, config.dynamicMinPercent));
+        addSetting(form, R.string.graphics_dynamic_min, dynamicMin);
+        Spinner dynamicMax = choice(percentChoices(GraphicsSettings.DYNAMIC_MAX),
+                selectedIndex(GraphicsSettings.DYNAMIC_MAX, config.dynamicMaxPercent));
+        addSetting(form, R.string.graphics_dynamic_max, dynamicMax);
+        Spinner recovery = choice(secondsChoices(GraphicsSettings.DYNAMIC_HOLD),
+                selectedIndex(GraphicsSettings.DYNAMIC_HOLD, config.dynamicHold));
+        addSetting(form, R.string.graphics_dynamic_hold, recovery);
+
+        addSettingsHeading(form, R.string.graphics_quality_section);
+        Spinner antiAliasing = choice(new String[] {getString(R.string.graphics_aa_off), getString(R.string.graphics_aa_fxaa),
+                getString(R.string.graphics_aa_ssaa)}, config.antiAliasing);
+        addSetting(form, R.string.graphics_anti_aliasing, antiAliasing);
+        Switch bloom = settingSwitch(config.bloom);
+        addSetting(form, R.string.graphics_bloom, bloom);
+        Switch fog = settingSwitch(config.fog);
+        addSetting(form, R.string.graphics_fog, fog);
+        Switch hdr = settingSwitch(config.hdr);
+        addSetting(form, R.string.graphics_hdr, hdr);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(form, new ScrollView.LayoutParams(ScrollView.LayoutParams.MATCH_PARENT,
+                ScrollView.LayoutParams.WRAP_CONTENT));
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.graphics_title)
+                .setView(scroll)
+                .setNegativeButton(R.string.dialog_cancel, null)
+                .setPositiveButton(R.string.graphics_save, (dialog, which) -> {
+                    config.renderPercent = GraphicsSettings.RENDER_SCALES[renderScale.getSelectedItemPosition()];
+                    config.screenFilter = filter.getSelectedItemPosition();
+                    config.brightness = GraphicsSettings.BRIGHTNESS[brightness.getSelectedItemPosition()];
+                    config.oledScreen = oled.getSelectedItemPosition();
+                    config.fpsCap = GraphicsSettings.FPS_CAPS[fps.getSelectedItemPosition()];
+                    config.vsync = vsync.isChecked();
+                    config.anisotropicFiltering = GraphicsSettings.ANISOTROPY[aniso.getSelectedItemPosition()];
+                    config.dynamicResolution = dynamic.isChecked();
+                    config.dynamicTargetFps = GraphicsSettings.DYNAMIC_TARGETS[target.getSelectedItemPosition()];
+                    config.dynamicMinPercent = GraphicsSettings.DYNAMIC_MIN[dynamicMin.getSelectedItemPosition()];
+                    config.dynamicMaxPercent = GraphicsSettings.DYNAMIC_MAX[dynamicMax.getSelectedItemPosition()];
+                    config.dynamicHold = GraphicsSettings.DYNAMIC_HOLD[recovery.getSelectedItemPosition()];
+                    config.antiAliasing = antiAliasing.getSelectedItemPosition();
+                    config.bloom = bloom.isChecked();
+                    config.fog = fog.isChecked();
+                    config.hdr = hdr.isChecked();
+                    try {
+                        GraphicsSettings.save(appDirectory, config);
+                        Toast.makeText(this, R.string.graphics_saved, Toast.LENGTH_SHORT).show();
+                    } catch (Exception error) {
+                        new AlertDialog.Builder(this).setTitle(R.string.graphics_save_failed_title)
+                                .setMessage(getString(R.string.graphics_save_failed, error.getMessage()))
+                                .setPositiveButton(R.string.dialog_ok, null).show();
+                    }
+                })
+                .show();
+    }
+
+    private Spinner choice(String[] values, int selected) {
+        Spinner spinner = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, values);
+        spinner.setAdapter(adapter);
+        spinner.setSelection(Math.max(0, Math.min(selected, values.length - 1)));
+        return spinner;
+    }
+
+    private Switch settingSwitch(boolean checked) {
+        Switch toggle = new Switch(this);
+        toggle.setChecked(checked);
+        toggle.setShowText(true);
+        return toggle;
+    }
+
+    private void addSettingsHeading(LinearLayout form, int title) {
+        TextView heading = text(getString(title), 12, 0xFFE7B64C, true);
+        heading.setLetterSpacing(0.08f);
+        LinearLayout.LayoutParams params = matchWrap();
+        params.topMargin = dp(17);
+        params.bottomMargin = dp(4);
+        form.addView(heading, params);
+    }
+
+    private void addSetting(LinearLayout form, int title, View control) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(13), dp(7), dp(8), dp(7));
+        row.setBackground(roundRect(0xFF242A21, 12, 0xFF404838, 1));
+        TextView label = text(getString(title), 13, 0xFFF4F0E7, true);
+        label.setPadding(0, 0, dp(8), 0);
+        row.addView(label, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        row.addView(control, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams params = matchWrap();
+        params.topMargin = dp(6);
+        form.addView(row, params);
+    }
+
+    private String[] percentChoices(int[] values) {
+        String[] choices = new String[values.length];
+        for (int i = 0; i < values.length; i++) choices[i] = getString(R.string.graphics_percent, values[i]);
+        return choices;
+    }
+
+    private String[] fpsChoices(int[] values) {
+        String[] choices = new String[values.length];
+        for (int i = 0; i < values.length; i++) choices[i] = getString(R.string.graphics_fps, values[i]);
+        return choices;
+    }
+
+    private String[] secondsChoices(int[] values) {
+        String[] choices = new String[values.length];
+        for (int i = 0; i < values.length; i++) choices[i] = getString(R.string.graphics_seconds, values[i]);
+        return choices;
+    }
+
+    private String[] numberChoices(int[] values) {
+        String[] choices = new String[values.length];
+        for (int i = 0; i < values.length; i++) choices[i] = Integer.toString(values[i]);
+        return choices;
+    }
+
+    private int selectedIndex(int[] values, int selected) {
+        int nearest = 0;
+        int distance = Integer.MAX_VALUE;
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] == selected) return i;
+            int next = Math.abs(values[i] - selected);
+            if (next < distance) {
+                nearest = i;
+                distance = next;
+            }
+        }
+        return nearest;
     }
 
     private void showCreditsIfNeeded(boolean force) {

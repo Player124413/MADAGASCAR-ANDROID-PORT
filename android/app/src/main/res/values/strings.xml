@@ -12,7 +12,9 @@
     <string name="launcher_import_iso">Import Xbox ISO / XISO</string>
     <string name="launcher_import_folder">Import folder with default.xbe</string>
     <string name="launcher_performance">CONTROLS AND PERFORMANCE</string>
-    <string name="launcher_tip_settings">Use the game’s original Xbox Start button to open its pause/options menu.</string>
+    <string name="launcher_touch_editor">EDIT XBOX TOUCH CONTROLS</string>
+    <string name="launcher_graphics">GRAPHICS AND PERFORMANCE</string>
+    <string name="launcher_tip_settings">Edit touch controls and graphics here before launching. The in-game original Xbox Start button also opens pause/options.</string>
     <string name="launcher_tip_touch">Touch controls use the original Xbox button layout. Their size, opacity and position can be adjusted in Touch Controls.</string>
     <string name="launcher_tip_mali">Mali devices use Vulkan 1.1 fallback paths, CPU DXT decoding and dynamic resolution where needed.</string>
     <string name="launcher_legal">The game is not included. Use files from your own legally obtained Xbox copy of Madagascar.</string>
@@ -31,6 +33,72 @@
     <string name="launcher_import_failed">Import failed</string>
     <string name="launcher_startup_no_message">no message</string>
     <string name="launcher_startup_failed">Could not open the Madagascar launcher.\n\n%1$s: %2$s\n\nA report was saved to Android/data/com.player124413.madagascar/files/logs/java-startup-crash.txt.\n\nSend its contents with the device model and Android version.</string>
+
+    <!-- Launcher Xbox touch editor -->
+    <string name="touch_editor_title">Edit Xbox touch controls</string>
+    <string name="touch_editor_hint">Tap an Xbox control, then drag it. Use – / + for its size.</string>
+    <string name="touch_editor_selected">%1$s selected · %2$s</string>
+    <string name="touch_editor_visible">VISIBLE</string>
+    <string name="touch_editor_hidden">HIDDEN</string>
+    <string name="touch_editor_smaller">– Size</string>
+    <string name="touch_editor_bigger">+ Size</string>
+    <string name="touch_editor_hide_show">Hide / show</string>
+    <string name="touch_editor_reset">Reset</string>
+    <string name="touch_editor_cancel">Cancel</string>
+    <string name="touch_editor_save">Save</string>
+    <string name="touch_editor_reset_done">Xbox default layout restored</string>
+    <string name="touch_editor_select_control">Select an Xbox control first.</string>
+    <string name="touch_editor_stick_required">The left stick cannot be hidden.</string>
+    <string name="touch_editor_saved">Xbox touch layout saved. It applies on the next launch.</string>
+    <string name="touch_editor_save_failed_title">Could not save controls</string>
+    <string name="touch_editor_save_failed">Could not save layout.toml: %1$s</string>
+    <string name="touch_editor_footer">Xbox layout preview · drag buttons to move them</string>
+    <string name="touch_editor_content_description">Xbox touch control layout editor</string>
+
+    <!-- Launcher graphics settings -->
+    <string name="graphics_title">Graphics and performance</string>
+    <string name="graphics_description">These settings are saved before the game starts. Dynamic resolution is the recommended default for stable performance.</string>
+    <string name="graphics_performance_section">PERFORMANCE</string>
+    <string name="graphics_quality_section">QUALITY</string>
+    <string name="graphics_render_scale">Render resolution</string>
+    <string name="graphics_screen_filter">Screen filter</string>
+    <string name="graphics_brightness">Brightness</string>
+    <string name="graphics_oled">OLED screen boost</string>
+    <string name="graphics_fps_cap">Frame-rate cap</string>
+    <string name="graphics_vsync">Vertical sync</string>
+    <string name="graphics_anisotropic">Anisotropic filtering</string>
+    <string name="graphics_dynamic">Dynamic resolution</string>
+    <string name="graphics_dynamic_target">Dynamic target</string>
+    <string name="graphics_dynamic_min">Minimum resolution</string>
+    <string name="graphics_dynamic_max">Maximum resolution</string>
+    <string name="graphics_dynamic_hold">Quality recovery delay</string>
+    <string name="graphics_anti_aliasing">Anti-aliasing</string>
+    <string name="graphics_bloom">Bloom</string>
+    <string name="graphics_fog">Fog</string>
+    <string name="graphics_hdr">HDR tone mapping</string>
+    <string name="graphics_percent">%1$d%%</string>
+    <string name="graphics_fps">%1$d FPS</string>
+    <string name="graphics_seconds">%1$d s</string>
+    <string name="graphics_off">Off</string>
+    <string name="graphics_on">On</string>
+    <string name="graphics_oled_auto">Auto</string>
+    <string name="graphics_aniso_default">Game default</string>
+    <string name="graphics_aa_off">Off</string>
+    <string name="graphics_aa_fxaa">FXAA</string>
+    <string name="graphics_aa_ssaa">2× SSAA</string>
+    <string name="graphics_filter_off">Off</string>
+    <string name="graphics_filter_crt_light">CRT light</string>
+    <string name="graphics_filter_crt_strong">CRT strong</string>
+    <string name="graphics_filter_sharp">Sharpen</string>
+    <string name="graphics_filter_vibrant">Vibrant</string>
+    <string name="graphics_filter_noir">Noir</string>
+    <string name="graphics_filter_sepia">Sepia</string>
+    <string name="graphics_filter_night">Night vision</string>
+    <string name="graphics_filter_vhs">VHS</string>
+    <string name="graphics_save">Save settings</string>
+    <string name="graphics_saved">Graphics settings saved. They apply on the next launch.</string>
+    <string name="graphics_save_failed_title">Could not save graphics settings</string>
+    <string name="graphics_save_failed">Could not save madagascar.toml: %1$s</string>
 
     <!-- One-time, reopenable attribution dialog. HTML links are intentional. -->
     <string name="credits_title">Madagascar Android</string>
