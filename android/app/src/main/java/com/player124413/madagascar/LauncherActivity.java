@@ -36,6 +36,9 @@ public final class LauncherActivity extends Activity {
     private GameImporter discImporter;
     private FolderImporter folderImporter;
     private boolean importing;
+    // buildLauncher() may fail part way through on an OEM framework. Keep onResume from touching fields created later
+    // in that method; the fallback screen must remain visible with the original diagnostic intact.
+    private boolean launcherReady;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -54,10 +57,12 @@ public final class LauncherActivity extends Activity {
             folderImporter = new FolderImporter(this);
 
             setContentView(buildLauncher());
+            launcherReady = true;
             refreshGameState();
         } catch (Throwable error) {
             // Keep the launch activity alive long enough to show a report location instead of immediately returning
             // to the home screen on an OEM-specific framework/resource failure.
+            launcherReady = false;
             MadagascarApplication.writeFailure(this, "Launcher initialization failed", error);
             showStartupFailure(error);
         }
@@ -66,7 +71,7 @@ public final class LauncherActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        refreshGameState();
+        if (launcherReady) refreshGameState();
     }
 
     private void showStartupFailure(Throwable error) {
@@ -137,7 +142,7 @@ public final class LauncherActivity extends Activity {
         buildTag.setPadding(0, dp(12), 0, 0);
         titleStack.addView(buildTag, matchWrap());
 
-        LinearLayout statusCard = card(page);
+        LinearLayout statusCard = card();
         statusCard.setOrientation(LinearLayout.VERTICAL);
         statusCard.setPadding(dp(17), dp(16), dp(17), dp(16));
         statusTitle = text("ПРОВЕРКА ФАЙЛОВ ИГРЫ", 13, 0xFFE7B64C, true);
@@ -150,7 +155,7 @@ public final class LauncherActivity extends Activity {
         pathLabel.setPadding(0, dp(9), 0, 0);
         statusCard.addView(pathLabel, matchWrap());
 
-        page.addView(statusCard, matchWrap());
+        page.addView(statusCard, cardParams());
 
         launchButton = button("ЗАПУСТИТЬ ИГРУ", 0xFF527B3C, 0xFFFFFFFF);
         launchButton.setOnClickListener(v -> launchGame());
@@ -182,13 +187,13 @@ public final class LauncherActivity extends Activity {
         qualityTitleParams.bottomMargin = dp(10);
         page.addView(qualityTitle, qualityTitleParams);
 
-        LinearLayout tips = card(page);
+        LinearLayout tips = card();
         tips.setOrientation(LinearLayout.VERTICAL);
         tips.setPadding(dp(16), dp(14), dp(16), dp(14));
         addBullet(tips, "Плавающая кнопка-шестерёнка открывает меню настроек во время игры.");
         addBullet(tips, "В «Сенсорном управлении» доступны пресеты, масштаб, прозрачность и редактор расположения. Кнопки можно перетаскивать, скрывать и менять их размер.");
         addBullet(tips, "Для Mali предусмотрены запасные Vulkan 1.1 пути, CPU-декодирование DXT и динамическое разрешение.");
-        page.addView(tips, matchWrap());
+        page.addView(tips, cardParams());
 
         TextView legal = text("Игра не входит в приложение. Используйте файлы со своей законно полученной копии Madagascar для Xbox.",
                 12, 0xFFAAA99D, false);
@@ -264,7 +269,8 @@ public final class LauncherActivity extends Activity {
     }
 
     private void refreshGameState() {
-        if (statusTitle == null || gameDirectory == null) return;
+        if (!launcherReady || statusTitle == null || statusDetail == null || pathLabel == null
+                || launchButton == null || gameDirectory == null) return;
         boolean found = hasGame(gameDirectory);
         statusTitle.setText(found ? "ФАЙЛЫ ГОТОВЫ" : "НУЖНЫ ФАЙЛЫ ИГРЫ");
         statusTitle.setTextColor(found ? 0xFF8FC76A : 0xFFE7B64C);
@@ -301,13 +307,16 @@ public final class LauncherActivity extends Activity {
         return false;
     }
 
-    private LinearLayout card(LinearLayout parent) {
+    private LinearLayout card() {
         LinearLayout view = new LinearLayout(this);
         view.setBackground(roundRect(0xE51C211B, 18, 0xFF3A4032, 1));
+        return view;
+    }
+
+    private LinearLayout.LayoutParams cardParams() {
         LinearLayout.LayoutParams params = matchWrap();
         params.topMargin = dp(6);
-        parent.addView(view, params);
-        return view;
+        return params;
     }
 
     private TextView text(String value, int sp, int color, boolean bold) {
