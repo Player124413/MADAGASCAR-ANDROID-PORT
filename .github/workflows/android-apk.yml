@@ -58,6 +58,15 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      - name: Verify repository update-signing identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -list -storetype PKCS12 \
+            -keystore android/signing/madagascar-public-release.p12 \
+            -storepass MadagascarAndroidPublicKey2026 \
+            -alias madagascar >/dev/null
+
       - name: Locate the hosted Android SDK command-line tools
         shell: bash
         run: |
@@ -128,11 +137,13 @@ jobs:
       # a stable private URL out of run metadata; it is used when iso_url is intentionally left blank.
       MADAGASCAR_ISO_URL: ${{ inputs.iso_url || secrets.MADAGASCAR_ISO_URL }}
       MADAGASCAR_ISO_SHA256: ${{ secrets.MADAGASCAR_ISO_SHA256 }}
-      # These four secrets make every production build update-compatible with the preceding one.
-      MADAGASCAR_KEYSTORE_BASE64: ${{ secrets.MADAGASCAR_KEYSTORE_BASE64 }}
-      MADAGASCAR_KEYSTORE_PASSWORD: ${{ secrets.MADAGASCAR_KEYSTORE_PASSWORD }}
-      MADAGASCAR_KEY_ALIAS: ${{ secrets.MADAGASCAR_KEY_ALIAS }}
-      MADAGASCAR_KEY_PASSWORD: ${{ secrets.MADAGASCAR_KEY_PASSWORD }}
+      # The owner explicitly chose a repository-stored development signing identity so real builds work without
+      # Action-secret setup. This is deliberately not a confidential production key; see android/README.md.
+      MADAGASCAR_KEYSTORE: ${{ github.workspace }}\android\signing\madagascar-public-release.p12
+      MADAGASCAR_KEYSTORE_TYPE: PKCS12
+      MADAGASCAR_KEYSTORE_PASSWORD: MadagascarAndroidPublicKey2026
+      MADAGASCAR_KEY_ALIAS: madagascar
+      MADAGASCAR_KEY_PASSWORD: MadagascarAndroidPublicKey2026
       EXPECTED_XBE_SHA256: 5a21c1357e652971199c11bc7bb00ac1a9acf7a23d6b1ad321528e9d60b6444c
 
     steps:
@@ -146,31 +157,18 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Restore the stable release signing key
+      - name: Verify repository signing identity
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $required = @(
-            'MADAGASCAR_KEYSTORE_BASE64',
-            'MADAGASCAR_KEYSTORE_PASSWORD',
-            'MADAGASCAR_KEY_ALIAS',
-            'MADAGASCAR_KEY_PASSWORD'
-          )
-          $missing = $required | Where-Object { [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_)) }
-          if ($missing) {
-            throw "Set these Actions secrets before producing an installable real APK: $($missing -join ', '). A temporary debug signature cannot update an existing installation."
+          if (!(Test-Path -LiteralPath $env:MADAGASCAR_KEYSTORE)) {
+            throw 'The repository signing keystore is missing.'
           }
-          try {
-            $keyBytes = [Convert]::FromBase64String($env:MADAGASCAR_KEYSTORE_BASE64)
-          } catch {
-            throw 'MADAGASCAR_KEYSTORE_BASE64 is not valid Base64.'
-          }
-          $keyPath = Join-Path $env:RUNNER_TEMP 'madagascar-release.jks'
-          [System.IO.File]::WriteAllBytes($keyPath, $keyBytes)
-          if (!(Test-Path $keyPath) -or (Get-Item $keyPath).Length -eq 0) {
-            throw 'The decoded release keystore is empty.'
-          }
-          "MADAGASCAR_KEYSTORE=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          & keytool.exe -list -storetype $env:MADAGASCAR_KEYSTORE_TYPE `
+            -keystore $env:MADAGASCAR_KEYSTORE `
+            -storepass $env:MADAGASCAR_KEYSTORE_PASSWORD `
+            -alias $env:MADAGASCAR_KEY_ALIAS | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "The repository signing identity could not be read ($LASTEXITCODE)." }
 
       - name: Set a monotonically increasing APK version
         shell: pwsh
@@ -333,6 +331,3 @@ jobs:
           }
           Remove-Item -LiteralPath 'kit\exemplos\madagascar\assets\default.xbe' -Force -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath 'kit\exemplos\madagascar\generated' -Recurse -Force -ErrorAction SilentlyContinue
-          if ($env:MADAGASCAR_KEYSTORE) {
-            Remove-Item -LiteralPath $env:MADAGASCAR_KEYSTORE -Force -ErrorAction SilentlyContinue
-          }

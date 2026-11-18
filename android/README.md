@@ -77,7 +77,7 @@ For a real APK, do **not** pass `-PandroidStub`; first provide the authorized XB
 
 ### Private real-image Actions build
 
-The same workflow also has a **manual** `real` mode for an image that the repository owner is authorized to use. It is never triggered by a push or pull request, and the URL is intentionally not accepted as a workflow input.
+The same workflow also has a **manual** `real` mode for an image that the repository owner is authorized to use. It is never triggered by a push or pull request; its URL can be supplied for that specific manual run or through a private Actions secret.
 
 1. Open **Actions → Android APK → Run workflow**, select `build_mode: real`, and paste an HTTPS direct-download URL **or a Google Drive file-sharing URL** into `iso_url`. The job handles Google Drive’s large-file confirmation page. The input is visible in the manual run’s metadata, so use it only in an access-controlled repository/environment.
 2. For a stable private link, use the Actions secret `MADAGASCAR_ISO_URL` instead and leave `iso_url` blank. A secret is preferred because it is masked and does not appear in run metadata.
@@ -87,21 +87,11 @@ The Windows job downloads the URL without printing it, extracts only `default.xb
 
 ### Install updates without uninstalling
 
-Android accepts an in-place update only when both the package ID and signing certificate are the same, and the new APK has a higher `versionCode`. The package ID is fixed as `com.player124413.madagascar`; the real workflow now calculates a monotonically increasing version for every run and **requires a persistent release key**. Create that key once, store it securely outside the repository, and add these four repository Actions secrets:
+Android accepts an in-place update only when both the package ID and signing certificate are the same, and the new APK has a higher `versionCode`. The package ID is fixed as `com.player124413.madagascar`; the real workflow calculates a monotonically increasing version for every run and signs it with the stable PKCS#12 identity at [`android/signing/madagascar-public-release.p12`](signing/madagascar-public-release.p12). No Actions-secret setup is required.
 
-- `MADAGASCAR_KEYSTORE_BASE64` — Base64 of the complete `.jks` keystore file;
-- `MADAGASCAR_KEYSTORE_PASSWORD`;
-- `MADAGASCAR_KEY_ALIAS`;
-- `MADAGASCAR_KEY_PASSWORD`.
+> **Intentional public development key.** The repository owner explicitly chose to commit this keystore so workflow users can build/update without any key setup. Its password and alias are therefore also visible in the workflow. This guarantees stable in-place updates for this project but is **not suitable for a security-sensitive public production release**: anyone who obtains the repository can sign an APK with the same identity. Do not use this signing setup for a Play Store release or where update authenticity matters.
 
-For example, generate a key locally with JDK `keytool` and keep the resulting `.jks` plus passwords backed up:
-
-```powershell
-keytool -genkeypair -v -keystore madagascar-release.jks -storetype JKS -alias madagascar -keyalg RSA -keysize 4096 -validity 10000
-[Convert]::ToBase64String([IO.File]::ReadAllBytes(".\madagascar-release.jks")) | Set-Clipboard
-```
-
-Paste the clipboard value into the first secret, and do not commit the key file. Once the first APK signed with this key is installed, later real workflow APKs install over it normally: do not change the application ID, alias, or release key. A prior APK signed by an ephemeral debug key cannot be updated with a new persistent key because its private signing key no longer exists; moving from such an artifact needs one final uninstall/reinstall. The workflow now fails early rather than producing another non-updateable real APK.
+Once the first APK signed with this repository identity is installed, later real workflow APKs install over it normally: do not change the application ID, alias, or `android/signing/madagascar-public-release.p12`. A prior APK signed by an ephemeral debug key cannot be updated with this new identity because its private signing key no longer exists; moving from such an artifact needs one final uninstall/reinstall.
 
 The extractor supports a game-partition XISO and an original-disc layout with the XDVDFS partition at `0x18300000`. Its parser is exercised by the public stub job using a generated, non-game XDVDFS fixture.
 

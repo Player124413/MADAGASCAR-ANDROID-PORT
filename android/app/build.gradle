@@ -46,8 +46,8 @@ android {
         }
     }
 
-    // CI/release builders provide this stable key through the environment, never through source control.
-    // APK updates are accepted by Android only when the package name *and the signing certificate* stay unchanged.
+    // The workflow supplies a stable key path through the environment. Android updates require both the package
+    // name and signing certificate to remain unchanged; see android/README.md for the repository-key trade-off.
     def keystorePath = System.getenv("MADAGASCAR_KEYSTORE")
     def requireReleaseSigning = project.hasProperty("requireReleaseSigning")
     if (requireReleaseSigning && !keystorePath) {
@@ -57,6 +57,8 @@ android {
         if (keystorePath) {
             release {
                 storeFile file(keystorePath)
+                def keystoreType = System.getenv("MADAGASCAR_KEYSTORE_TYPE")
+                if (keystoreType) storeType = keystoreType
                 storePassword System.getenv("MADAGASCAR_KEYSTORE_PASSWORD")
                 keyAlias System.getenv("MADAGASCAR_KEY_ALIAS")
                 keyPassword System.getenv("MADAGASCAR_KEY_PASSWORD")
