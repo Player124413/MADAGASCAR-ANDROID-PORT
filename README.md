@@ -58,6 +58,12 @@ Problemas conhecidos:
 - No clock padrão o FPS ainda cai abaixo de 30 em partes do gameplay; com a GPU em 614 MHz fica estável. Baixar a resolução de renderização no menu do port (por exemplo 75%) ajuda.
 - A 0.1.8 ainda está sendo testada no Switch real.
 
+### Android (prévia de implementação)
+
+A pasta [`android/`](android/README.md) contém uma meta Android ARM64 separada, com launcher de importação por armazenamento com escopo, host SDL3/Vulkan, controles de toque editáveis e caminhos de compatibilidade para Vulkan 1.1/Mali. Não inclui o jogo nem os arquivos recompilados.
+
+Ela ainda **não foi compilada nem testada em dispositivo nesta cópia**: este ambiente não tem Android SDK/NDK, Java, XBE ou código gerado. Portanto, não há APK publicada nem alegação de compatibilidade sem artefatos em Mali até executar a validação em hardware real. Consulte o guia Android para dependências, build e plano de testes.
+
 ## Capturas
 
 Capturas da build de teste para PC, que usa o mesmo código do jogo e o mesmo renderizador do Switch.

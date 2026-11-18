@@ -56,9 +56,22 @@ void StepOpacity(int step);
 uint32_t ControlsSize();
 void StepSize(int step);
 void EditLayout();
+#ifdef MADAGASCAR_ANDROID
+const char* SkinName();
+void StepSkin(int step);
+const char* StickModeName();
+void StepStickMode(int step);
+#endif
 }  // namespace touch
 
-// native/update.cpp: the activity asks GitHub for a newer release and says what it found
+#ifdef MADAGASCAR_ANDROID
+// native/dynamic_resolution.cpp: the render scale currently selected by the frame-time controller
+namespace dynres {
+uint32_t Percent();
+}
+#endif
+
+// native/update.cpp: Android logs the manual-update hint if a future settings page exposes it
 namespace host {
 void CheckForUpdates();
 }  // namespace host
@@ -108,6 +121,11 @@ const char* const kAudioOutputNames[] = {"AUTOMATIC", "MONO", "2.0 STEREO", "5.1
 const char* const kLanguageNames[] = {"ENGLISH", "FRENCH", "GERMAN", "ITALIAN", "SPANISH",
                                       "INDONESIAN"};  // as game::kLanguages
 constexpr uint32_t kFpsCaps[] = {30, 60, 75, 90, 120, 144, 165, 240, 360, kFpsCapRefresh, 0};
+#ifdef MADAGASCAR_ANDROID
+constexpr uint32_t kDynamicTargets[] = {20, 24, 25, 30, 40, 45, 60};
+constexpr uint32_t kAndroidAntiAliasings[] = {0, 1, 2};
+const char* const kAndroidAntiAliasingNames[] = {"OFF", "FXAA", "2X SSAA"};
+#endif
 
 int StepIndex(int index, int step, int count) {
     if (count <= 0) return 0;
@@ -255,7 +273,12 @@ enum RowId { kRenderResolution, kMaxFps, kVsync, kFpsCounter, kAniso, kReloadBlu
              kInfiniteAmmo, kRapidFire, kNoRecoil, kGameSpeed, kGodMode, kOneHitKill, kInfiniteGrenades,
              kCheckUpdates, kTouchSensitivity, kLeftDeadzone, kRightDeadzone, kLeftSensitivity, kRightSensitivity,
              kScreenFilter, kGyroInvertX, kGyroInvertY, kUnlockLevels, kUnlockBlackOps, kBrightness, kSkipRevsub, kSkipShadow,
-             kGyroVertical, kGyroAxis, kGyroSteadiness, kGyroDriftFix, kOled };
+             kGyroVertical, kGyroAxis, kGyroSteadiness, kGyroDriftFix, kOled,
+#ifdef MADAGASCAR_ANDROID
+             kTouchSkin, kTouchStick, kBloom, kFog, kAntiAliasing, kHdr, kDynamicRes, kDynamicTarget, kDynamicMin,
+             kDynamicMax, kDynamicHold
+#endif
+};
 
 using rows::Kind;
 using rows::Row;
@@ -271,8 +294,22 @@ constexpr Row kGraphicsRows[] = {
     {Kind::Value, kVsync, "VERTICAL SYNC"},
     {Kind::Value, kMaxFps, "MAX FRAME RATE"},
     {Kind::Value, kFpsCounter, "FPS COUNTER"},
+#ifdef MADAGASCAR_ANDROID
+    {Kind::Heading, -1, "ADAPTIVE PERFORMANCE"},
+    {Kind::Value, kDynamicRes, "DYNAMIC RESOLUTION"},
+    {Kind::Value, kDynamicTarget, "TARGET FPS"},
+    {Kind::Value, kDynamicMin, "MINIMUM RESOLUTION"},
+    {Kind::Value, kDynamicMax, "MAXIMUM RESOLUTION"},
+    {Kind::Value, kDynamicHold, "QUALITY RECOVERY DELAY"},
+#endif
     {Kind::Heading, -1, "QUALITY"},
     {Kind::Value, kAniso, "ANISOTROPIC FILTERING"},
+#ifdef MADAGASCAR_ANDROID
+    {Kind::Value, kAntiAliasing, "ANTI-ALIASING"},
+    {Kind::Value, kBloom, "BLOOM"},
+    {Kind::Value, kFog, "FOG"},
+    {Kind::Value, kHdr, "HDR TONE MAPPING"},
+#endif
 };
 
 constexpr Row kTouchRows[] = {
@@ -281,6 +318,10 @@ constexpr Row kTouchRows[] = {
     {Kind::Value, kTouchLayout, "CONTROLS LAYOUT"},
     {Kind::Value, kTouchOpacity, "CONTROLS OPACITY"},
     {Kind::Value, kTouchSize, "CONTROLS SIZE"},
+#ifdef MADAGASCAR_ANDROID
+    {Kind::Value, kTouchSkin, "BUTTON STYLE"},
+    {Kind::Value, kTouchStick, "ANALOG STICK"},
+#endif
     {Kind::Value, kTouchEdit, "EDIT CONTROLS POSITION"},
     {Kind::Heading, -1, "MOTION CONTROLS"},
     {Kind::Value, kGyro, "GYROSCOPE"},
@@ -346,6 +387,12 @@ bool* ToggleFlag(Settings& s, int id) {
     switch (id) {
         case kVsync: return &s.vsync;
         case kFpsCounter: return &o.fps_counter;
+#ifdef MADAGASCAR_ANDROID
+        case kBloom: return &o.bloom;
+        case kFog: return &o.fog;
+        case kHdr: return &o.hdr;
+        case kDynamicRes: return &o.dynamic_resolution;
+#endif
         case kSkipRevsub: return &o.skip_revsub;
         case kSkipShadow: return &o.skip_shadow;
         case kReloadBlur: return &o.reload_blur;
@@ -377,13 +424,50 @@ bool StepDisplayRow(int id, int step, Settings& s, char (&text)[64]) {
     game::Options& o = game::Opt();
     switch (id) {
         case kRenderResolution: {
-            // 20% to 200% in steps of 5
+            // 20% to 200% in steps of 5. Android's dynamic controller owns this while it is enabled.
             if (step) s.render_percent = uint32_t(StepRange(int(s.render_percent), 20, 200, 5, step));
+#ifdef MADAGASCAR_ANDROID
+            uint32_t percent = o.dynamic_resolution ? dynres::Percent() : s.render_percent;
+#else
+            uint32_t percent = s.render_percent;
+#endif
             Mode out = Output();
-            std::snprintf(text, sizeof(text), "%u%% (%ux%u)", s.render_percent, out.width * s.render_percent / 100,
-                          out.height * s.render_percent / 100);
+            std::snprintf(text, sizeof(text), "%u%% (%ux%u)", percent, out.width * percent / 100,
+                          out.height * percent / 100);
             return true;
         }
+#ifdef MADAGASCAR_ANDROID
+        case kDynamicTarget:
+            std::snprintf(text, sizeof(text), "%u FPS",
+                          kDynamicTargets[StepTable(kDynamicTargets, o.dynamic_target_fps, step)]);
+            return true;
+        case kDynamicMin: {
+            if (step)
+                o.dynamic_min_percent = uint32_t(StepRange(int(o.dynamic_min_percent), 20,
+                                                            int(o.dynamic_max_percent), 5, step));
+            Mode out = Output();
+            std::snprintf(text, sizeof(text), "%u%% (%ux%u)", o.dynamic_min_percent,
+                          out.width * o.dynamic_min_percent / 100, out.height * o.dynamic_min_percent / 100);
+            return true;
+        }
+        case kDynamicMax: {
+            if (step)
+                o.dynamic_max_percent = uint32_t(StepRange(int(o.dynamic_max_percent), int(o.dynamic_min_percent),
+                                                            200, 5, step));
+            Mode out = Output();
+            std::snprintf(text, sizeof(text), "%u%% (%ux%u)", o.dynamic_max_percent,
+                          out.width * o.dynamic_max_percent / 100, out.height * o.dynamic_max_percent / 100);
+            return true;
+        }
+        case kDynamicHold:
+            if (step) o.dynamic_hold = uint32_t(StepRange(int(o.dynamic_hold), 1, 30, 1, step));
+            std::snprintf(text, sizeof(text), "%u S", o.dynamic_hold);
+            return true;
+        case kAntiAliasing:
+            std::snprintf(text, sizeof(text), "%s",
+                          kAndroidAntiAliasingNames[StepTable(kAndroidAntiAliasings, o.anti_aliasing, step)]);
+            return true;
+#endif
         case kFmvScale:
             std::snprintf(text, sizeof(text), "%s", kFmvScaleNames[StepTable(kFmvScales, o.fmv_scale, step)]);
             return true;
@@ -503,6 +587,16 @@ void StepInputRow(int id, int step, char (&text)[64]) {
             if (step) touch::StepSize(step);
             std::snprintf(text, sizeof(text), "%u%%", touch::ControlsSize());
             break;
+#ifdef MADAGASCAR_ANDROID
+        case kTouchSkin:
+            if (step) touch::StepSkin(step);
+            std::snprintf(text, sizeof(text), "%s", touch::SkinName());
+            break;
+        case kTouchStick:
+            if (step) touch::StepStickMode(step);
+            std::snprintf(text, sizeof(text), "%s", touch::StickModeName());
+            break;
+#endif
         case kTouchEdit:
             // any step opens the editor over the screen
             if (step) touch::EditLayout();
@@ -742,8 +836,12 @@ void PollCapture() {
 bool CaptureFree() { return g_capture < 0 && ImGui::GetFrameCount() > g_capture_done + 1; }
 
 void ValueRow(const Row& r) {
+    // Dynamic resolution owns its manual render-percent row; keep its current value visible but make the row inert.
+    const bool enabled = rows::Enabled(r);
+    if (!enabled) ImGui::BeginDisabled();
     int step = OptionRow(r.label, Ui(RowText(r.id, 0)).c_str());
-    if (step) RowText(r.id, step);
+    if (!enabled) ImGui::EndDisabled();
+    if (enabled && step) RowText(r.id, step);
 }
 
 void KeyRow(const Row& r) {
@@ -935,7 +1033,23 @@ void rows::Defaults(int page) { RestoreDefaults(page); }
 // the recomp's own pages share one set of defaults, too much to undo from one of them
 bool rows::Restorable(int page) { return page == kKeyboardPage || page == kCheatsPage; }
 
-bool rows::Enabled(const Row&) { return true; }
+bool rows::Enabled(const Row& row) {
+#ifdef MADAGASCAR_ANDROID
+    if (row.kind != Kind::Value) return true;
+    const bool dynamic = game::Opt().dynamic_resolution;
+    switch (row.id) {
+        case kRenderResolution: return !dynamic;
+        case kDynamicTarget:
+        case kDynamicMin:
+        case kDynamicMax:
+        case kDynamicHold: return dynamic;
+        default: return true;
+    }
+#else
+    (void)row;
+    return true;
+#endif
+}
 
 bool rows::Opens(const Row& row) { return row.kind == Kind::Value && (row.id == kTouchEdit || row.id == kCheckUpdates); }
 

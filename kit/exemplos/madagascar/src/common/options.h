@@ -18,6 +18,18 @@ struct Options {
     // a look over the frame: 0 none, 1 and 2 a CRT (light, strong), 3 sharpen, 4 vibrant, 5 noir, 6 sepia,
     // 7 night vision, 8 VHS
     uint32_t screen_filter = 0;
+#ifdef MADAGASCAR_ANDROID
+    // Android renderer options; kept out of the Switch UI unless that host grows the same render passes.
+    bool bloom = true;
+    bool fog = true;
+    uint32_t anti_aliasing = 0;  // 0 off, 1 FXAA, 2 2x SSAA
+    bool hdr = false;
+    bool dynamic_resolution = true;
+    uint32_t dynamic_target_fps = 30;
+    uint32_t dynamic_min_percent = 45;
+    uint32_t dynamic_max_percent = 100;
+    uint32_t dynamic_hold = 5;
+#endif
     uint32_t brightness = 5;
     uint32_t oled = 0;  // the darks lifted further for the OLED model's screen: 0 auto (OLED, out of the dock), 1 off, 2 on
     // the lamps' shadows: passes that subtract with REVERSE_SUBTRACT, reading the lamp's depth map. Drawn since the

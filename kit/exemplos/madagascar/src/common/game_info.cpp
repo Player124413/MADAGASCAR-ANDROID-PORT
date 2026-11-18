@@ -52,6 +52,17 @@ void Load(const void* table) {
     if (const toml::table* keys = t["keys"].as_table())
         for (auto&& [id, value] : *keys)
             if (auto v = value.value<std::string>()) o.keys[std::string(id.str())] = *v;
+#ifdef MADAGASCAR_ANDROID
+    // Settings are user-editable TOML. Keep malformed or values from an older build in the ranges that the
+    // Android renderer and its dynamic-resolution state machine can safely use.
+    auto grid = [](uint32_t value) { return std::clamp(value, 20u, 200u) / 5u * 5u; };
+    o.anti_aliasing = std::min(o.anti_aliasing, 2u);
+    o.dynamic_target_fps = std::clamp(o.dynamic_target_fps, 20u, 60u);
+    o.dynamic_min_percent = grid(o.dynamic_min_percent);
+    o.dynamic_max_percent = grid(o.dynamic_max_percent);
+    if (o.dynamic_min_percent > o.dynamic_max_percent) std::swap(o.dynamic_min_percent, o.dynamic_max_percent);
+    o.dynamic_hold = std::clamp(o.dynamic_hold, 1u, 30u);
+#endif
 }
 
 // after the settings load, before boot
@@ -99,6 +110,17 @@ const app::GameInfo app::kGame = {
     .images = {{"default.xbe", "Madagascar"}},
     .options = {{"fps_counter", &game::Opt().fps_counter, nullptr},
                 {"screen_filter", nullptr, &game::Opt().screen_filter},
+#ifdef MADAGASCAR_ANDROID
+                {"bloom", &game::Opt().bloom, nullptr},
+                {"fog", &game::Opt().fog, nullptr},
+                {"anti_aliasing", nullptr, &game::Opt().anti_aliasing},
+                {"hdr", &game::Opt().hdr, nullptr},
+                {"dynamic_resolution", &game::Opt().dynamic_resolution, nullptr},
+                {"dynamic_target_fps", nullptr, &game::Opt().dynamic_target_fps},
+                {"dynamic_min_percent", nullptr, &game::Opt().dynamic_min_percent},
+                {"dynamic_max_percent", nullptr, &game::Opt().dynamic_max_percent},
+                {"dynamic_hold", nullptr, &game::Opt().dynamic_hold},
+#endif
                 {"brightness", nullptr, &game::Opt().brightness},
                 {"oled_screen", nullptr, &game::Opt().oled},
                 {"left_stick_deadzone", nullptr, &game::Opt().left_deadzone},

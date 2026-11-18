@@ -25,3 +25,10 @@ switch_sd/
 .claude/
 *.tmp
 *.bmp
+
+# Android local build state and dependencies fetched by Gradle/CMake.
+android/.gradle/
+android/.cxx/
+android/build/
+android/app/build/
+android/third_party/SDL/
