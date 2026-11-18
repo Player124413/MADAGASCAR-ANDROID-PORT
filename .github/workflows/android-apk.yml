@@ -12,14 +12,29 @@ on:
       - "kit/exemplos/madagascar/src/**"
       - ".github/workflows/android-apk.yml"
   workflow_dispatch:
+    inputs:
+      build_mode:
+        description: "stub validates the public toolchain; real downloads a private, authorized image from a repository secret"
+        type: choice
+        required: true
+        default: stub
+        options:
+          - stub
+          - real
+      upload_real_apk:
+        description: "Upload the real APK as a one-day private CI artifact (only enable in a private, access-controlled repository)"
+        type: boolean
+        required: true
+        default: false
 
-# The repository deliberately excludes the XBE and generated recompiler output. This workflow therefore builds a
-# packaging-only native stub. It validates the reproducible Android toolchain path but never publishes game code/data.
 permissions:
   contents: read
 
 jobs:
+  # This always-safe build carries no game-derived files. It validates Gradle, NDK, CMake, SDL and APK packaging
+  # on every Android-related change.
   apk-stub:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_mode == 'stub' }}
     name: Build and inspect ARM64 stub APK
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -27,6 +42,10 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v5
+
+      - name: Test XDVDFS extraction with a synthetic image
+        shell: bash
+        run: python3 android/tools/extract_xdvdfs.py --self-test
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -92,3 +111,151 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
+
+  # A real build is deliberately manual. The image URL is read only from MADAGASCAR_ISO_URL, never from YAML or a
+  # workflow input, so it does not appear in source control or job logs. This must only point to an authorized copy.
+  apk-real:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_mode == 'real' }}
+    name: Build ARM64 APK from authorized private image
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      MADAGASCAR_ISO_URL: ${{ secrets.MADAGASCAR_ISO_URL }}
+      MADAGASCAR_ISO_SHA256: ${{ secrets.MADAGASCAR_ISO_SHA256 }}
+      EXPECTED_XBE_SHA256: 5a21c1357e652971199c11bc7bb00ac1a9acf7a23d6b1ad321528e9d60b6444c
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Download the private ISO without printing its URL
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:MADAGASCAR_ISO_URL)) {
+            throw 'Set the MADAGASCAR_ISO_URL Actions secret to a direct HTTPS download URL before selecting real mode.'
+          }
+          $iso = Join-Path $env:RUNNER_TEMP 'madagascar.iso'
+          curl.exe --fail --location --retry 3 --retry-delay 2 --output $iso $env:MADAGASCAR_ISO_URL
+          if (!(Test-Path $iso) -or (Get-Item $iso).Length -lt 1MB) {
+            throw 'The download is missing or implausibly small. Use a direct binary-download URL, not an HTML share page.'
+          }
+          "MADAGASCAR_ISO_PATH=$iso" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Verify optional image checksum
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (![string]::IsNullOrWhiteSpace($env:MADAGASCAR_ISO_SHA256)) {
+            $actual = (Get-FileHash -LiteralPath $env:MADAGASCAR_ISO_PATH -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $env:MADAGASCAR_ISO_SHA256.ToLowerInvariant()) {
+              throw 'The downloaded ISO does not match MADAGASCAR_ISO_SHA256.'
+            }
+          }
+
+      - name: Extract and verify the expected USA default.xbe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:GITHUB_WORKSPACE 'kit\exemplos\madagascar\assets\default.xbe'
+          python android\tools\extract_xdvdfs.py `
+            --input $env:MADAGASCAR_ISO_PATH `
+            --output $output `
+            --expected-sha256 $env:EXPECTED_XBE_SHA256
+
+      - name: Locate Visual Studio with clang-cl
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (!(Test-Path $vswhere)) { throw 'vswhere.exe was not found on the Windows runner.' }
+          $vsdir = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Llvm.Clang -property installationPath
+          if ([string]::IsNullOrWhiteSpace($vsdir) -or !(Test-Path (Join-Path $vsdir 'VC\Tools\Llvm\x64\bin\clang-cl.exe'))) {
+            throw 'A Visual Studio installation with the C++ Clang tools is required for xbe_recomp.'
+          }
+          "MADAGASCAR_VS_DIR=$vsdir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Recompile the verified XBE
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass `
+            -File "$env:GITHUB_WORKSPACE\kit\ferramentas\recompilar.ps1" `
+            -Jogo "$env:GITHUB_WORKSPACE\kit\exemplos\madagascar" `
+            -VsDir $env:MADAGASCAR_VS_DIR
+          if ($LASTEXITCODE -ne 0) { throw "xbe_recomp failed with exit code $LASTEXITCODE." }
+
+      - name: Locate Android SDK command-line tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $candidates = @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "$env:LOCALAPPDATA\Android\Sdk") |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) }
+          $sdkRoot = $candidates | Select-Object -First 1
+          if (!$sdkRoot) { throw 'Android SDK was not found on the Windows runner.' }
+          $sdkManager = Get-ChildItem -LiteralPath $sdkRoot -Filter sdkmanager.bat -Recurse -File |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (!$sdkManager) { throw "sdkmanager.bat was not found under $sdkRoot." }
+          "ANDROID_HOME=$sdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ANDROID_SDK_ROOT=$sdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "MADAGASCAR_SDKMANAGER=$sdkManager" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install pinned Android SDK components
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $answers = 1..100 | ForEach-Object { 'y' }
+          $answers | & $env:MADAGASCAR_SDKMANAGER "--sdk_root=$env:ANDROID_HOME" --licenses
+          & $env:MADAGASCAR_SDKMANAGER "--sdk_root=$env:ANDROID_HOME" `
+            'platform-tools' 'platforms;android-34' 'build-tools;34.0.0' `
+            'ndk;28.2.13676358' 'cmake;3.31.6'
+          if ($LASTEXITCODE -ne 0) { throw "sdkmanager failed with exit code $LASTEXITCODE." }
+
+      - name: Assemble release APK
+        working-directory: android
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          .\gradlew.bat --no-daemon --stacktrace :app:assembleRelease
+          if ($LASTEXITCODE -ne 0) { throw "Gradle failed with exit code $LASTEXITCODE." }
+
+      - name: Verify real APK contents and ABI
+        working-directory: android
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $apk = 'app\build\outputs\apk\release\app-release.apk'
+          if (!(Test-Path $apk) -or (Get-Item $apk).Length -le 0) { throw 'Release APK was not produced.' }
+          $entries = & jar tf $apk
+          if ($entries -notcontains 'lib/arm64-v8a/libmain.so' -or $entries -notcontains 'lib/arm64-v8a/libSDL3.so') {
+            throw 'The release APK is missing an expected ARM64 native library.'
+          }
+          if ($entries | Select-String -Pattern '\.(xbe|iso|xiso)$' -CaseSensitive:$false) {
+            throw 'Game-image files must not be packaged into the APK.'
+          }
+
+      - name: Upload real APK only when explicitly requested
+        if: ${{ inputs.upload_real_apk }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: madagascar-android-release-apk-private
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Remove private inputs from the runner
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          if ($env:MADAGASCAR_ISO_PATH) {
+            Remove-Item -LiteralPath $env:MADAGASCAR_ISO_PATH -Force -ErrorAction SilentlyContinue
+          }
+          Remove-Item -LiteralPath 'kit\exemplos\madagascar\assets\default.xbe' -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath 'kit\exemplos\madagascar\generated' -Recurse -Force -ErrorAction SilentlyContinue

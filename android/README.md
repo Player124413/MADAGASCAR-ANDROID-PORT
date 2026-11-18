@@ -73,7 +73,19 @@ app/build/outputs/apk/debug/app-debug.apk
 
 `-PandroidStub` selects an intentionally tiny `libmain.so`, rather than the Xbox-derived generated sources. The workflow then verifies that the APK contains only `arm64-v8a` native libraries (`libSDL3.so` and `libmain.so`) and no XBE/ISO/XISO files, then uploads it as a seven-day CI artifact. This is a reproducibility and packaging test, **not a playable build or game test**.
 
-For a real APK, do **not** pass `-PandroidStub`; first provide the legal XBE and every generated partition listed above. A real build is expected to fail early with an explicit missing-input message if they are absent. Run the stub job from the GitHub Actions tab after changing Gradle/CMake/manifest code, then build and exercise the real APK locally or in a private CI environment where the game-derived inputs are available.
+For a real APK, do **not** pass `-PandroidStub`; first provide the authorized XBE and every generated partition listed above. A real build is expected to fail early with an explicit missing-input message if they are absent.
+
+### Private real-image Actions build
+
+The same workflow also has a **manual** `real` mode for an image that the repository owner is authorized to use. It is never triggered by a push or pull request, and the URL is intentionally not accepted as a workflow input.
+
+1. In the repository’s **Settings → Secrets and variables → Actions**, create the secret `MADAGASCAR_ISO_URL`. Its value must be a direct HTTPS binary-download URL for the private image. A normal Google Drive sharing page is HTML and will be rejected; configure a direct download URL instead.
+2. Recommended: create `MADAGASCAR_ISO_SHA256` with the SHA-256 of the complete image. This detects a changed, partial, or substituted download before parsing it.
+3. Open **Actions → Android APK → Run workflow**, select `build_mode: real`, and run it only in an access-controlled repository/environment.
+
+The Windows job downloads the URL without printing it, extracts only `default.xbe` with `android/tools/extract_xdvdfs.py`, checks it against the expected USA XBE SHA-256, runs `kit/ferramentas/recompilar.ps1`, and then builds the ARM64 release APK. It removes the ISO, XBE and generated directory at the end of the ephemeral runner job. The APK is **not uploaded by default**; the `upload_real_apk` checkbox has to be explicitly selected and keeps the artifact for one day. Do not enable that option in a public repository or for collaborators who are not authorized to receive the resulting game-derived build.
+
+The extractor supports a game-partition XISO and an original-disc layout with the XDVDFS partition at `0x18300000`. Its parser is exercised by the public stub job using a generated, non-game XDVDFS fixture.
 
 ## First run and controls
 

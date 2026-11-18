@@ -32,3 +32,7 @@ android/.cxx/
 android/build/
 android/app/build/
 android/third_party/SDL/
+
+# Private/game-derived inputs produced by the recompiler; never add them to a commit or CI cache.
+kit/exemplos/madagascar/assets/
+kit/exemplos/madagascar/generated/
