@@ -142,10 +142,11 @@ final class GameImporter {
                 part.delete();
                 if (error == null && !cancelled) error = "Не удалось сохранить образ в папке игры.";
             }
-            String why = error;
+            final boolean result = ok;
+            final String why = error;
             main.post(() -> {
                 progress.dismiss();
-                if (ok) {
+                if (result) {
                     Log.i(TAG, "imported " + iso);
                     message("Файлы игры готовы", name + " сохранён. Теперь можно запускать игру.", () -> done.accept(true));
                 } else if (why != null) {
