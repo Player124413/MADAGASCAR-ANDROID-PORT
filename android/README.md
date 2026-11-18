@@ -85,6 +85,24 @@ The same workflow also has a **manual** `real` mode for an image that the reposi
 
 The Windows job downloads the URL without printing it, extracts only `default.xbe` with `android/tools/extract_xdvdfs.py`, checks it against the expected USA XBE SHA-256, runs `kit/ferramentas/recompilar.ps1`, and then builds the ARM64 release APK. It removes the ISO, XBE and generated directory at the end of the ephemeral runner job. The APK is **not uploaded by default**; the `upload_real_apk` checkbox has to be explicitly selected and keeps the artifact for one day. Do not enable that option in a public repository or for collaborators who are not authorized to receive the resulting game-derived build.
 
+### Install updates without uninstalling
+
+Android accepts an in-place update only when both the package ID and signing certificate are the same, and the new APK has a higher `versionCode`. The package ID is fixed as `com.player124413.madagascar`; the real workflow now calculates a monotonically increasing version for every run and **requires a persistent release key**. Create that key once, store it securely outside the repository, and add these four repository Actions secrets:
+
+- `MADAGASCAR_KEYSTORE_BASE64` — Base64 of the complete `.jks` keystore file;
+- `MADAGASCAR_KEYSTORE_PASSWORD`;
+- `MADAGASCAR_KEY_ALIAS`;
+- `MADAGASCAR_KEY_PASSWORD`.
+
+For example, generate a key locally with JDK `keytool` and keep the resulting `.jks` plus passwords backed up:
+
+```powershell
+keytool -genkeypair -v -keystore madagascar-release.jks -storetype JKS -alias madagascar -keyalg RSA -keysize 4096 -validity 10000
+[Convert]::ToBase64String([IO.File]::ReadAllBytes(".\madagascar-release.jks")) | Set-Clipboard
+```
+
+Paste the clipboard value into the first secret, and do not commit the key file. Once the first APK signed with this key is installed, later real workflow APKs install over it normally: do not change the application ID, alias, or release key. A prior APK signed by an ephemeral debug key cannot be updated with a new persistent key because its private signing key no longer exists; moving from such an artifact needs one final uninstall/reinstall. The workflow now fails early rather than producing another non-updateable real APK.
+
 The extractor supports a game-partition XISO and an original-disc layout with the XDVDFS partition at `0x18300000`. Its parser is exercised by the public stub job using a generated, non-game XDVDFS fixture.
 
 ## First run and controls

@@ -14,6 +14,8 @@ game/
 *.elf
 *.log
 *.bin
+*.jks
+*.keystore
 
 # Game data and anything derived from it: never in the repository.
 *.ISO

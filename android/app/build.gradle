@@ -46,8 +46,13 @@ android {
         }
     }
 
-    // CI/release builders may provide a private signing key without writing it to the repository.
+    // CI/release builders provide this stable key through the environment, never through source control.
+    // APK updates are accepted by Android only when the package name *and the signing certificate* stay unchanged.
     def keystorePath = System.getenv("MADAGASCAR_KEYSTORE")
+    def requireReleaseSigning = project.hasProperty("requireReleaseSigning")
+    if (requireReleaseSigning && !keystorePath) {
+        throw new GradleException("A stable MADAGASCAR_KEYSTORE is required for this release build.")
+    }
     signingConfigs {
         if (keystorePath) {
             release {
@@ -68,7 +73,8 @@ android {
         }
         release {
             minifyEnabled false
-            // A local unsigned release remains installable for validation; production builds must supply the key above.
+            // Local validation may use Gradle's debug key. The CI workflow passes -PrequireReleaseSigning and
+            // refuses that fallback, because an ephemeral debug key cannot support future in-place updates.
             signingConfig keystorePath ? signingConfigs.release : signingConfigs.debug
         }
     }

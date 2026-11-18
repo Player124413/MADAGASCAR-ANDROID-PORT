@@ -128,6 +128,11 @@ jobs:
       # a stable private URL out of run metadata; it is used when iso_url is intentionally left blank.
       MADAGASCAR_ISO_URL: ${{ inputs.iso_url || secrets.MADAGASCAR_ISO_URL }}
       MADAGASCAR_ISO_SHA256: ${{ secrets.MADAGASCAR_ISO_SHA256 }}
+      # These four secrets make every production build update-compatible with the preceding one.
+      MADAGASCAR_KEYSTORE_BASE64: ${{ secrets.MADAGASCAR_KEYSTORE_BASE64 }}
+      MADAGASCAR_KEYSTORE_PASSWORD: ${{ secrets.MADAGASCAR_KEYSTORE_PASSWORD }}
+      MADAGASCAR_KEY_ALIAS: ${{ secrets.MADAGASCAR_KEY_ALIAS }}
+      MADAGASCAR_KEY_PASSWORD: ${{ secrets.MADAGASCAR_KEY_PASSWORD }}
       EXPECTED_XBE_SHA256: 5a21c1357e652971199c11bc7bb00ac1a9acf7a23d6b1ad321528e9d60b6444c
 
     steps:
@@ -140,6 +145,45 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
+
+      - name: Restore the stable release signing key
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $required = @(
+            'MADAGASCAR_KEYSTORE_BASE64',
+            'MADAGASCAR_KEYSTORE_PASSWORD',
+            'MADAGASCAR_KEY_ALIAS',
+            'MADAGASCAR_KEY_PASSWORD'
+          )
+          $missing = $required | Where-Object { [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_)) }
+          if ($missing) {
+            throw "Set these Actions secrets before producing an installable real APK: $($missing -join ', '). A temporary debug signature cannot update an existing installation."
+          }
+          try {
+            $keyBytes = [Convert]::FromBase64String($env:MADAGASCAR_KEYSTORE_BASE64)
+          } catch {
+            throw 'MADAGASCAR_KEYSTORE_BASE64 is not valid Base64.'
+          }
+          $keyPath = Join-Path $env:RUNNER_TEMP 'madagascar-release.jks'
+          [System.IO.File]::WriteAllBytes($keyPath, $keyBytes)
+          if (!(Test-Path $keyPath) -or (Get-Item $keyPath).Length -eq 0) {
+            throw 'The decoded release keystore is empty.'
+          }
+          "MADAGASCAR_KEYSTORE=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Set a monotonically increasing APK version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Android's versionCode is a signed 32-bit integer. This stays unique for a workflow rerun as well as a
+          # new dispatch, while remaining comfortably below the Play/package-manager limit.
+          $run = [int64]$env:GITHUB_RUN_NUMBER
+          $attempt = [int64]$env:GITHUB_RUN_ATTEMPT
+          $code = $run * 100 + $attempt
+          if ($code -le 1 -or $code -gt 2100000000) { throw "Calculated invalid Android versionCode: $code" }
+          "MADAGASCAR_VERSION_CODE=$code" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "MADAGASCAR_VERSION_NAME=0.1.0-ci.$run.$attempt" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Download the private ISO without printing its URL
         shell: pwsh
@@ -239,7 +283,10 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          .\gradlew.bat --no-daemon --stacktrace :app:assembleRelease
+          .\gradlew.bat --no-daemon --stacktrace :app:assembleRelease `
+            -PrequireReleaseSigning `
+            "-PversionCode=$env:MADAGASCAR_VERSION_CODE" `
+            "-PversionName=$env:MADAGASCAR_VERSION_NAME"
           if ($LASTEXITCODE -ne 0) { throw "Gradle failed with exit code $LASTEXITCODE." }
 
       - name: Verify real APK contents and ABI
@@ -256,6 +303,17 @@ jobs:
           if ($entries | Select-String -Pattern '\.(xbe|iso|xiso)$' -CaseSensitive:$false) {
             throw 'Game-image files must not be packaged into the APK.'
           }
+          $buildTools = Get-ChildItem -LiteralPath (Join-Path $env:ANDROID_HOME 'build-tools') -Directory |
+            Sort-Object Name -Descending | Select-Object -First 1
+          if (!$buildTools) { throw 'Android build-tools were not found for APK verification.' }
+          $aapt = Join-Path $buildTools.FullName 'aapt.exe'
+          $apksigner = Join-Path $buildTools.FullName 'apksigner.bat'
+          $badging = (& $aapt dump badging $apk) -join "`n"
+          if ($badging -notmatch "versionCode='$env:MADAGASCAR_VERSION_CODE'") {
+            throw "The APK did not receive expected versionCode $env:MADAGASCAR_VERSION_CODE."
+          }
+          & $apksigner verify --verbose $apk
+          if ($LASTEXITCODE -ne 0) { throw "apksigner verification failed with exit code $LASTEXITCODE." }
 
       - name: Upload real APK only when explicitly requested
         if: ${{ inputs.upload_real_apk }}
@@ -275,3 +333,6 @@ jobs:
           }
           Remove-Item -LiteralPath 'kit\exemplos\madagascar\assets\default.xbe' -Force -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath 'kit\exemplos\madagascar\generated' -Recurse -Force -ErrorAction SilentlyContinue
+          if ($env:MADAGASCAR_KEYSTORE) {
+            Remove-Item -LiteralPath $env:MADAGASCAR_KEYSTORE -Force -ErrorAction SilentlyContinue
+          }
