@@ -46,6 +46,7 @@ void Load(const void* table) {
     o.touch_sensitivity = float(t["touch_sensitivity"].value_or(double(o.mouse_sensitivity)));
     o.left_sensitivity = float(t["left_stick_sensitivity"].value_or(double(o.left_sensitivity)));
     o.right_sensitivity = float(t["right_stick_sensitivity"].value_or(double(o.right_sensitivity)));
+    o.aspect_ratio = std::min(o.aspect_ratio, 1u);
     std::string language = t["language"].value_or(o.language);
     bool known = std::find(std::begin(kLanguages), std::end(kLanguages), language) != std::end(kLanguages);
     if (known) o.language = language;
@@ -110,6 +111,7 @@ const app::GameInfo app::kGame = {
     .images = {{"default.xbe", "Madagascar"}},
     .options = {{"fps_counter", &game::Opt().fps_counter, nullptr},
                 {"screen_filter", nullptr, &game::Opt().screen_filter},
+                {"aspect_ratio", nullptr, &game::Opt().aspect_ratio},
 #ifdef MADAGASCAR_ANDROID
                 {"bloom", &game::Opt().bloom, nullptr},
                 {"fog", &game::Opt().fog, nullptr},

@@ -123,8 +123,9 @@ namespace app {
 namespace {
 
 const char* kModes[] = {"fullscreen", "borderless", "windowed"};
-// Bump when first-run settings change. Old Android settings receive the safe 30 FPS / v-sync defaults once.
-constexpr int kDefaults = 3;
+// Bump when first-run settings change. Version 4 replaces the soft low-resolution first run with an original-sharp
+// full-resolution frame; players can still deliberately enable dynamic resolution in the launcher.
+constexpr int kDefaults = 4;
 
 std::filesystem::path File() { return ExeDir() / kGame.settings; }
 
@@ -147,11 +148,13 @@ toml::table Table() {
     return t;
 }
 
-// a phone renders the console's frame at about 720p unless the settings say otherwise
-constexpr uint32_t kFirstRunRenderPercent = 67;
+// Do not start below the display resolution: filtering an undersized frame is the most visible source of the
+// non-original softness reported on phones. Performance-constrained devices can opt into dynamic resolution later.
+constexpr uint32_t kFirstRunRenderPercent = 100;
 
 void PhoneFrameDefaults(Settings& s) {
     // The original game targets 30 FPS. V-sync and a matching cap avoid a busy render loop on phones.
+    s.render_percent = kFirstRunRenderPercent;
     s.fps_cap = 30;
     s.vsync = true;
 }
@@ -189,12 +192,19 @@ void Load() {
     s.vsync = t["vsync"].value_or(s.vsync);
     s.aniso = t["anisotropic_filtering"].value_or(s.aniso);
     s.join_ip = t["join_ip"].value_or(s.join_ip);
-    if (t["defaults"].value_or(int64_t(0)) < kDefaults) PhoneFrameDefaults(s);
+    bool migrate_sharp_defaults = t["defaults"].value_or(int64_t(0)) < kDefaults;
+    if (migrate_sharp_defaults) PhoneFrameDefaults(s);
     for (const Option& o : kGame.options) {
         if (o.flag) *o.flag = t[o.key].value_or(*o.flag);
         else *o.value = t[o.key].value_or(*o.value);
     }
     if (kGame.load) kGame.load(&t);
+    if (migrate_sharp_defaults) {
+        // Existing Android installs used a 67% dynamic frame by default. Migrate that automatic blur away once;
+        // users can turn the performance option back on explicitly from the launcher.
+        game::Opt().dynamic_resolution = false;
+        game::Opt().anti_aliasing = 0;
+    }
 }
 
 void Save() {
@@ -236,6 +246,9 @@ Mode Output() {
 }
 
 bool Widescreen() {
+    // 4:3 mode is more than host letterboxing: report a 4:3 television before the Xbox title initializes so it builds
+    // its original projection and HUD. The launcher applies this choice on the next game start.
+    if (game::Opt().aspect_ratio) return false;
     Mode m = Output();
     return m.width * 2 >= m.height * 3;  // 3:2 or wider
 }

@@ -246,6 +246,9 @@ public final class LauncherActivity extends Activity {
         intro.setPadding(0, 0, 0, dp(8));
         form.addView(intro, matchWrap());
 
+        Spinner aspect = choice(new String[] {getString(R.string.graphics_aspect_fullscreen),
+                getString(R.string.graphics_aspect_4_3)}, config.aspectRatio);
+        addSetting(form, R.string.graphics_aspect_ratio, aspect);
         Spinner renderScale = choice(percentChoices(GraphicsSettings.RENDER_SCALES),
                 selectedIndex(GraphicsSettings.RENDER_SCALES, config.renderPercent));
         addSetting(form, R.string.graphics_render_scale, renderScale);
@@ -304,6 +307,7 @@ public final class LauncherActivity extends Activity {
                 .setView(scroll)
                 .setNegativeButton(R.string.dialog_cancel, null)
                 .setPositiveButton(R.string.graphics_save, (dialog, which) -> {
+                    config.aspectRatio = aspect.getSelectedItemPosition();
                     config.renderPercent = GraphicsSettings.RENDER_SCALES[renderScale.getSelectedItemPosition()];
                     config.screenFilter = filter.getSelectedItemPosition();
                     config.brightness = GraphicsSettings.BRIGHTNESS[brightness.getSelectedItemPosition()];

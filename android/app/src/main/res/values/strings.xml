@@ -60,6 +60,9 @@
     <string name="graphics_description">These settings are saved before the game starts. Dynamic resolution is the recommended default for stable performance.</string>
     <string name="graphics_performance_section">PERFORMANCE</string>
     <string name="graphics_quality_section">QUALITY</string>
+    <string name="graphics_aspect_ratio">Aspect ratio</string>
+    <string name="graphics_aspect_fullscreen">Full screen (stretch)</string>
+    <string name="graphics_aspect_4_3">Original 4:3</string>
     <string name="graphics_render_scale">Render resolution</string>
     <string name="graphics_screen_filter">Screen filter</string>
     <string name="graphics_brightness">Brightness</string>

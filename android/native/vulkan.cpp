@@ -577,7 +577,6 @@ struct DrawTextures {
     bool rt[4] = {};
     float k[4] = {1, 1, 1, 1};
     float wide[4] = {};
-    bool blur[4] = {};
     uint32_t gw[4] = {};  // a render target's guest width, 0 for any other texture
 };
 
@@ -819,7 +818,6 @@ void FillCombinerConstants(const State& s, DrawConstants& c) {
 }
 
 constexpr float kGlowBoxTexels = 3.0f;
-constexpr float kBlurTapTexels = 7.0f / 6;
 
 void FillTexelConstants(int i, const TextureDesc& d, const DrawTextures& stages, DrawConstants& c) {
     c.texsize[i][0] = float(d.width);
@@ -830,12 +828,11 @@ void FillTexelConstants(int i, const TextureDesc& d, const DrawTextures& stages,
     c.texsize[i][2] = -0.5f / (float(d.width) * k);
     c.texsize[i][3] = -0.5f / (float(d.height) * k);
     if (stages.wide[i] > 0) {
-        bool blur = stages.blur[i];
-        float fw = blur ? kBlurTapTexels : kGlowBoxTexels;
-        float per_texel = blur ? 1.0f : 0.5f;
-        float n = std::ceil(fw * stages.wide[i] * per_texel);
-        c.spread[i][0] = fw / (n * float(d.width) * k);
-        c.spread[i][1] = fw / (n * float(d.height) * k);
+        // Preserve the game's glow downsample, but do not synthesize the soft-focus pass that the Android renderer
+        // previously inferred from an undersized target. Madagascar's original presentation is not blurred.
+        float n = std::ceil(kGlowBoxTexels * stages.wide[i] * 0.5f);
+        c.spread[i][0] = kGlowBoxTexels / (n * float(d.width) * k);
+        c.spread[i][1] = kGlowBoxTexels / (n * float(d.height) * k);
         c.spread[i][2] = n;
     }
 }
@@ -2624,10 +2621,10 @@ VkImageView VulkanBackend::BindTargetTexture(const State& s, int stage, const Te
     info.kind = kTex2D;
     Target* rt = draw_rt_;
     float k = float(t.w) / (t.gw * stages.k[stage]);
-    bool blur = rt && t.gw < guest_w_ && rt->gw < guest_w_;
-    if (!t.depth && box && k > kUpscaledMin && rt && rt != &t && (blur || t.gw > rt->gw || t.gh > rt->gh)) {
+    // Only retain the real downsample used by glow effects. The old smaller-target heuristic added an artificial
+    // full-screen soft focus which is not part of Madagascar's Xbox image.
+    if (!t.depth && box && k > kUpscaledMin && rt && rt != &t && (t.gw > rt->gw || t.gh > rt->gh)) {
         stages.wide[stage] = k;
-        stages.blur[stage] = blur;
         info.flags |= kTexWide;
     }
     stages.fmt[stage] = t.img.fmt;
@@ -3207,7 +3204,10 @@ void VulkanBackend::DrawFrame(Target* t, uint32_t index) {
         Transition(t->img, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         Transition(lut_, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         const VkImageView views[4] = {t->img.view, lut_.view, VK_NULL_HANDLE, VK_NULL_HANDLE};
-        const VkSampler samplers[4] = {linear_, point_, point_, point_};
+        // With no post effect selected, preserve the Xbox frame's texels instead of bilinearly softening the entire
+        // picture as it is enlarged to a phone display. Filters and explicit anti-aliasing keep their own sampling.
+        VkSampler frame_sampler = filter || post || ssaa ? linear_ : point_;
+        const VkSampler samplers[4] = {frame_sampler, point_, point_, point_};
         set = Set(views, samplers);
     }
     VkRenderingAttachmentInfoKHR ca{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR};

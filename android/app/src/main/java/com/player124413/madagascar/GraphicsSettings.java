@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 /** Launcher-side editor for the graphics keys read by android/native/main.cpp and game_info.cpp. */
 final class GraphicsSettings {
     static final String FILE_NAME = "madagascar.toml";
+    // Must match android/native/main.cpp. Version 4 removes the old, blurry 67% dynamic-render default.
+    private static final int DEFAULTS_VERSION = 4;
 
     static final int[] RENDER_SCALES = {50, 67, 75, 85, 100};
     static final int[] FPS_CAPS = {30, 45, 60};
@@ -27,7 +29,9 @@ final class GraphicsSettings {
     static final int[] BRIGHTNESS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
     static final class Config {
-        int renderPercent = 67;
+        // 0 stretches to the landscape display; 1 keeps the original 4:3 frame with side bars.
+        int aspectRatio;
+        int renderPercent = 100;
         int fpsCap = 30;
         boolean vsync = true;
         int anisotropicFiltering = 0;
@@ -38,13 +42,14 @@ final class GraphicsSettings {
         boolean fog = true;
         int antiAliasing;
         boolean hdr;
-        boolean dynamicResolution = true;
+        boolean dynamicResolution;
         int dynamicTargetFps = 30;
         int dynamicMinPercent = 45;
         int dynamicMaxPercent = 100;
         int dynamicHold = 5;
 
         void normalize() {
+            aspectRatio = clamp(aspectRatio, 0, 1);
             renderPercent = clamp(renderPercent, 20, 200);
             fpsCap = clamp(fpsCap, 0, 240);
             anisotropicFiltering = in(ANISOTROPY, anisotropicFiltering) ? anisotropicFiltering : 0;
@@ -68,6 +73,8 @@ final class GraphicsSettings {
         if (!file.isFile()) return config;
         try {
             String text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            int defaults = integer(text, "defaults", 0);
+            config.aspectRatio = integer(text, "aspect_ratio", config.aspectRatio);
             config.renderPercent = integer(text, "render_percent", config.renderPercent);
             config.fpsCap = integer(text, "fps_cap", config.fpsCap);
             config.vsync = bool(text, "vsync", config.vsync);
@@ -84,6 +91,12 @@ final class GraphicsSettings {
             config.dynamicMinPercent = integer(text, "dynamic_min_percent", config.dynamicMinPercent);
             config.dynamicMaxPercent = integer(text, "dynamic_max_percent", config.dynamicMaxPercent);
             config.dynamicHold = integer(text, "dynamic_hold", config.dynamicHold);
+            if (defaults < DEFAULTS_VERSION) {
+                // The old first-run choice rendered at 67% and then enlarged it, which looks like a blur on a phone.
+                config.renderPercent = 100;
+                config.dynamicResolution = false;
+                config.antiAliasing = 0;
+            }
         } catch (Exception ignored) {
             // The native host also uses conservative defaults when a settings file cannot be parsed.
         }
@@ -97,8 +110,9 @@ final class GraphicsSettings {
         File file = new File(directory, FILE_NAME);
         String text = file.isFile() ? new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8) : "";
         LinkedHashMap<String, String> values = new LinkedHashMap<>();
-        // defaults = 3 prevents native first-run migration from replacing an explicit launcher frame cap/v-sync value.
-        values.put("defaults", "3");
+        // Keep native migration in sync with the launcher: v4 is the full-resolution, no-auto-blur default.
+        values.put("defaults", Integer.toString(DEFAULTS_VERSION));
+        values.put("aspect_ratio", Integer.toString(config.aspectRatio));
         values.put("render_percent", Integer.toString(config.renderPercent));
         values.put("fps_cap", Integer.toString(config.fpsCap));
         values.put("vsync", Boolean.toString(config.vsync));

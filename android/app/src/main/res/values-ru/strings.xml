@@ -60,6 +60,9 @@
     <string name="graphics_description">Настройки сохраняются до запуска игры. Динамическое разрешение рекомендуется для стабильной производительности.</string>
     <string name="graphics_performance_section">ПРОИЗВОДИТЕЛЬНОСТЬ</string>
     <string name="graphics_quality_section">КАЧЕСТВО</string>
+    <string name="graphics_aspect_ratio">Соотношение сторон</string>
+    <string name="graphics_aspect_fullscreen">На весь экран (растянуть)</string>
+    <string name="graphics_aspect_4_3">Оригинальное 4:3</string>
     <string name="graphics_render_scale">Разрешение рендера</string>
     <string name="graphics_screen_filter">Фильтр экрана</string>
     <string name="graphics_brightness">Яркость</string>
